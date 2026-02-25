@@ -17,6 +17,16 @@ import pandas as pd
 
 
 df = pd.read_csv("Saber 11 Datos Valle.csv")
+indicesviolencia = pd.read_excel("Violencia Valle del Cauca Indices con Página con todo junto.xlsx",sheet_name="Indices")
+homicidios = pd.read_excel("Violencia Valle del Cauca Indices con Página con todo junto.xlsx", sheet_name="Homicidios")
+lesionesp = pd.read_excel("Violencia Valle del Cauca Indices con Página con todo junto.xlsx", sheet_name="Lesiones Personales")
+violencia_int = pd.read_excel("Violencia Valle del Cauca Indices con Página con todo junto.xlsx", sheet_name="Violencia Intrafamiliar")
+delitos_sex = pd.read_excel("Violencia Valle del Cauca Indices con Página con todo junto.xlsx", sheet_name="Delitos Sexuales")
+extorsion = pd.read_excel("Violencia Valle del Cauca Indices con Página con todo junto.xlsx", sheet_name="Extorsión")
+amenazas = pd.read_excel("Violencia Valle del Cauca Indices con Página con todo junto.xlsx", sheet_name="Amenazas")
+hurtos = pd.read_excel("Violencia Valle del Cauca Indices con Página con todo junto.xlsx", sheet_name="Hurtos")
+secuestros = pd.read_excel("Violencia Valle del Cauca Indices con Página con todo junto.xlsx", sheet_name="Secuestro")
+mapa_valle = gpd.read_file('valle.json')
 
 ##################################################################################################################
 ##################################################################################################################
@@ -51,7 +61,7 @@ df["estu_fechanacimiento"] = pd.to_datetime(
     format="%d/%m/%Y",
     errors="coerce"
 )
-df["estu_fechanacimiento"].isna().sum()
+#df["estu_fechanacimiento"].isna().sum()
 
 #df["estu_fechanacimiento"].describe()
 
@@ -95,7 +105,7 @@ df["cole_mcpio_ubicacion"] = df["cole_mcpio_ubicacion"].replace(reemplazos)
 
 
 
-df[["cole_cod_mcpio_ubicacion","estrato_num"]].groupby("cole_cod_mcpio_ubicacion").value_counts()
+#df[["cole_cod_mcpio_ubicacion","estrato_num"]].groupby("cole_cod_mcpio_ubicacion").value_counts()
 prom_estrato=(df.groupby("cole_cod_mcpio_ubicacion")["estrato_num"].transform("mean").round())
 
 df["estrato_num"] = df["estrato_num"].fillna(prom_estrato).astype("Int64")
@@ -136,18 +146,19 @@ df["fami_tienelavadora"] = df["fami_tienelavadora"].fillna("No")
 #df[df["cole_area_ubicacion"].isna()].head()
 #df[["cole_cod_dane_establecimiento","cole_cod_mcpio_ubicacion"]]["cole_cod_dane_establecimiento"].isna().groupby(df["cole_cod_mcpio_ubicacion"]).value_counts()
 #df[df["cole_cod_dane_establecimiento"].isna()]["cole_nombre_establecimiento"].value_counts()
-df[df["desemp_ingles"].isna()]["estrato_num"].value_counts()
+#df[df["desemp_ingles"].isna()]["estrato_num"].value_counts()
 #df["fami_tienecomputador"].value_counts()
 
-df[["punt_ingles", "punt_matematicas", "punt_lectura_critica","punt_global"]].corr()["punt_ingles"]
-x=df[["punt_ingles", "punt_matematicas", "punt_lectura_critica","punt_global"]].corr()["punt_ingles"]["punt_matematicas"]+df[["punt_ingles", "punt_matematicas", "punt_lectura_critica","punt_global"]].corr()["punt_ingles"]["punt_lectura_critica"]+df[["punt_ingles", "punt_matematicas", "punt_lectura_critica","punt_global"]].corr()["punt_ingles"]["punt_global"]
-reemplazaringles=round((df[["punt_ingles", "punt_matematicas", "punt_lectura_critica","punt_global"]].corr()["punt_ingles"]["punt_matematicas"]/x)*df["punt_matematicas"]+(df[["punt_ingles", "punt_matematicas", "punt_lectura_critica","punt_global"]].corr()["punt_ingles"]["punt_lectura_critica"]/x)*df["punt_lectura_critica"]+((df[["punt_ingles", "punt_matematicas", "punt_lectura_critica","punt_global"]].corr()["punt_ingles"]["punt_global"]/5)/x)*df["punt_global"],0)
-#print(reemplazaringles
+#df[["punt_ingles", "punt_matematicas", "punt_lectura_critica","punt_global"]].corr()["punt_ingles"]
+corr_mat = df[["punt_ingles", "punt_matematicas", "punt_lectura_critica"]].corr()
+c_mat = abs(corr_mat["punt_ingles"]["punt_matematicas"])
+c_lec = abs(corr_mat["punt_ingles"]["punt_lectura_critica"])
+suma_c = c_mat + c_lec
+reemplazo = ((c_mat / suma_c) * df["punt_matematicas"] + (c_lec / suma_c) * df["punt_lectura_critica"])
+df["punt_ingles"] = df["punt_ingles"].fillna(round(reemplazo, 0))
 
-df["punt_ingles"] = df["punt_ingles"].fillna(reemplazaringles)
 
-
-df[df["desemp_ingles"].isna()]["punt_ingles"].describe()
+#df[df["desemp_ingles"].isna()]["punt_ingles"].describe()
 
 
 
@@ -173,7 +184,6 @@ valores = ["A1", "A2", "B1"]
 
 nivel_calc = np.select(condiciones, valores, default="B+")
 
-# Solo llenar faltantes en desemp_ingles
 df["desemp_ingles"] = df["desemp_ingles"].fillna(pd.Series(nivel_calc, index=df.index))
 
 
@@ -188,7 +198,7 @@ df["estu_cod_reside_mcpio"].replace({'YUMBO': 76892}, inplace=True)
 df["año"]=df["periodo"].astype(str).str[:4]
 
 df=df[df["año"].astype(int)>2014]
-df.isna().sum()
+#df.isna().sum()
 
 
 #print(df.shape)
@@ -261,9 +271,7 @@ def normalizar(s):
 
 
 
-puntajes["cole_mcpio_ubicacion"] = (
-    df["cole_mcpio_ubicacion"]
-    .pipe(normalizar))
+puntajes["cole_mcpio_ubicacion"] = (df["cole_mcpio_ubicacion"].pipe(normalizar))
 puntajes["cole_mcpio_ubicacion"] = puntajes["cole_mcpio_ubicacion"].replace(["CALIMA (DARIEN)", "CALIMA"], "CALIMA EL DARIEN")
 
 mapazonas= {
@@ -322,7 +330,7 @@ mapazonas= {
 puntajes["Zona"] = puntajes["cole_mcpio_ubicacion"].map(mapazonas)
 #print(municipios.groupby("Zona").size())
 #municipios[municipios["Zona"].isna()]
-puntajes.head()
+#puntajes.head()
 
 """
 puntajess.head()
@@ -357,18 +365,12 @@ municipiosss= df.copy()
 
 #puntajes_solonum.columns
 
-puntajes["Puntaje bilingue"].fillna(
-    puntajes["Puntaje bilingue"].mode()[0],
-    inplace=True
-)
+puntajes["Puntaje bilingue"].fillna(puntajes["Puntaje bilingue"].mode()[0],inplace=True)
 
-ordinales = ["Puntaje Educación Madre","Puntaje Educación Padre","Puntaje Personas Hogar","Puntaje Cuartos Hogar"]
+ordenlogico = ["Puntaje Educación Madre","Puntaje Educación Padre","Puntaje Personas Hogar","Puntaje Cuartos Hogar"]
 
-for col in ordinales:
-    puntajes[col] = puntajes[col].fillna(
-        puntajes.groupby("fami_estratovivienda")[col].transform("mean")
-
-    )
+for col in ordenlogico:
+    puntajes[col] = puntajes[col].fillna(puntajes.groupby("fami_estratovivienda")[col].transform("mean"))
 
 
 
@@ -379,13 +381,89 @@ puntajes["Puntaje recursos hogar"] = puntajes["Puntaje Automóvil"]+puntajes["Pu
 
 
 puntajes_solonum = puntajes.iloc[:, 45:].copy()
+puntajes2020s=puntajes[puntajes["año"].astype(int)>=2020]
 
 ##################################################################################################################
 ##################################################################################################################
+############################################Violencia#############################################################
 ##################################################################################################################
 ##################################################################################################################
 ##################################################################################################################
+
 ##################################################################################################################
+##############################################Índice Homicidios###################################################
+##################################################################################################################
+
+indice_largo = homicidios.melt(id_vars="cole_mcpio_ubicacion",value_vars=[2020, 2021, 2022, 2023, 2024]
+                                     ,var_name="año",value_name="indice_homicidios")
+        
+
+indice_largo["año"] = indice_largo["año"].astype(int)
+puntajes2020s["año"] = puntajes2020s["año"].astype(int)
+
+muni_homicidios =puntajes2020s.merge(indice_largo,on=["cole_mcpio_ubicacion", "año"],how="left")
+#print(muni_vio)
+#muni_vio.shape
+#munihomicidios=muni_homicidios.groupby(["cole_mcpio_ubicacion"])
+#munihomicidios.describe()
+
+#print(munihomicidios.corr(numeric_only=True)["indice_violencia"].sort_values(ascending=False))
+
+
+#print(categorias)
+munihomicidios_agg = (muni_homicidios.groupby(["cole_mcpio_ubicacion", "año"], as_index=False).agg(Zona=("Zona", "first"),
+                                indice_homicidios=("indice_homicidios", "first"),**{col: (col, "mean") for col in categorias}))
+
+
+limite_superior = munihomicidios_agg['indice_homicidios'].quantile(0.90)
+# 2. Localizar la fila exacta (Municipio 'EL AGUILA' y Año 2022) y asignar el nuevo valor
+# Usamos .loc[fila, columna]
+munihomicidios_agg['indice_homicidios_ajustado'] = munihomicidios_agg['indice_homicidios'].clip(upper=limite_superior)
+
+
+
+
+
+
+##################################################################################################################
+##############################################Índice General Violencia############################################
+##################################################################################################################
+
+
+anios=[2020, 2021, 2022, 2023, 2024]
+# Convertir 2020–2024 a numeric correctamente
+for y in anios:
+    indicesviolencia[y] = (indicesviolencia[y].astype(str))
+    indicesviolencia[y] = pd.to_numeric(indicesviolencia[y], errors="coerce")
+    
+#indicesviolencia.isna().sum()
+#indicesviolencia.head()
+
+
+indice_largo = indicesviolencia.melt(id_vars="cole_mcpio_ubicacion",value_vars=[2020, 2021, 2022, 2023, 2024],var_name="año",value_name="indice_violencia")
+
+indice_largo["año"] = indice_largo["año"].astype(int)
+
+puntajes2020s["año"] = puntajes2020s["año"].astype(int)
+
+
+muni_vio = puntajes2020s.merge(indice_largo,on=["cole_mcpio_ubicacion", "año"],how="left")
+
+categorias = ["punt_ingles","punt_matematicas","punt_sociales_ciudadanas","punt_c_naturales","punt_lectura_critica",
+              "punt_global","Puntaje educacion padres","Puntaje recursos hogar"]
+
+munivio_agg = (muni_vio.groupby(["cole_mcpio_ubicacion", "año"], as_index=False).agg(Zona=("Zona", "first"),
+                                indice_violencia=("indice_violencia", "first"),**{col: (col, "mean") for col in categorias}))
+
+
+
+
+
+
+
+
+
+
 
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
