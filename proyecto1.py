@@ -9,11 +9,11 @@ import seaborn as sns
 import geopandas as gpd
 import requests
 import json
+
 import dash
 from dash import dcc  # dash core components
 from dash import html # dash html components
 import plotly.express as px
-import pandas as pd
 
 
 df = pd.read_csv("Saber 11 Datos Valle.csv")
@@ -389,7 +389,8 @@ puntajes2020s=puntajes[puntajes["año"].astype(int)>=2020]
 ##################################################################################################################
 ##################################################################################################################
 ##################################################################################################################
-
+categorias = ["punt_ingles","punt_matematicas","punt_sociales_ciudadanas","punt_c_naturales"
+              ,"punt_lectura_critica","punt_global","Puntaje educacion padres","Puntaje recursos hogar"]
 ##################################################################################################################
 ##############################################Índice Homicidios###################################################
 ##################################################################################################################
@@ -416,9 +417,156 @@ munihomicidios_agg = (muni_homicidios.groupby(["cole_mcpio_ubicacion", "año"], 
 
 
 limite_superior = munihomicidios_agg['indice_homicidios'].quantile(0.90)
-# 2. Localizar la fila exacta (Municipio 'EL AGUILA' y Año 2022) y asignar el nuevo valor
-# Usamos .loc[fila, columna]
+
 munihomicidios_agg['indice_homicidios_ajustado'] = munihomicidios_agg['indice_homicidios'].clip(upper=limite_superior)
+
+##################################################################################################################
+##############################################Índice Lesiones Personales##########################################
+##################################################################################################################
+
+
+indice_largo = lesionesp.melt(id_vars="cole_mcpio_ubicacion",value_vars=[2020, 2021, 2022, 2023, 2024]
+                                     ,var_name="año",value_name="indice_lesiones_personales")
+        
+
+indice_largo["año"] = indice_largo["año"].astype(int)
+puntajes2020s["año"] = puntajes2020s["año"].astype(int)
+
+muni_lesionesp =puntajes2020s.merge(indice_largo,on=["cole_mcpio_ubicacion", "año"],how="left")
+#print(muni_vio)
+#muni_vio.shape
+munilesionesp=muni_lesionesp.groupby(["cole_mcpio_ubicacion"])
+#munilesionesp.describe()
+
+#print(munihomicidios.corr(numeric_only=True)["indice_violencia"].sort_values(ascending=False))
+
+
+#print(categorias)
+munilesionesp_agg = (muni_lesionesp.groupby(["cole_mcpio_ubicacion", "año"], as_index=False).agg(Zona=("Zona", "first"),
+                                indice_lesiones_personales=("indice_lesiones_personales", "first"),**{col: (col, "mean") for col in categorias}))
+
+##################################################################################################################
+##############################################Índice Violencia Intrafamiliar######################################
+##################################################################################################################
+
+indice_largo = violencia_int.melt(id_vars="cole_mcpio_ubicacion",value_vars=[2020, 2021, 2022, 2023, 2024]
+                                     ,var_name="año",value_name="indice_violencia_intrafamiliar")
+        
+
+indice_largo["año"] = indice_largo["año"].astype(int)
+puntajes2020s["año"] = puntajes2020s["año"].astype(int)
+
+muni_violencia_int =puntajes2020s.merge(indice_largo,on=["cole_mcpio_ubicacion", "año"],how="left")
+#print(muni_vio)
+#muni_vio.shape
+muniviolencia_int=muni_violencia_int.groupby(["cole_mcpio_ubicacion"])
+#muniviolencia_int.describe()
+
+#print(munihomicidios.corr(numeric_only=True)["indice_violencia"].sort_values(ascending=False))
+
+
+#print(categorias)
+muniviolencia_int_agg = (muni_violencia_int.groupby(["cole_mcpio_ubicacion", "año"], as_index=False).agg(Zona=("Zona", "first"),
+                                indice_violencia_intrafamiliar=("indice_violencia_intrafamiliar", "first"),**{col: (col, "mean") for col in categorias}))
+
+##################################################################################################################
+##############################################Índice Delitos Sexuales#############################################
+##################################################################################################################
+
+
+indice_largo = delitos_sex.melt(id_vars="cole_mcpio_ubicacion",value_vars=[2020, 2021, 2022, 2023, 2024]
+                                     ,var_name="año",value_name="indice_delitos_sexuales")
+        
+
+indice_largo["año"] = indice_largo["año"].astype(int)
+puntajes2020s["año"] = puntajes2020s["año"].astype(int)
+
+muni_delitos_sex =puntajes2020s.merge(indice_largo,on=["cole_mcpio_ubicacion", "año"],how="left")
+#print(muni_vio)
+#muni_vio.shape
+munidelitos_sex=muni_delitos_sex.groupby(["cole_mcpio_ubicacion"])
+#munidelitos_sex.describe()
+
+#print(munihomicidios.corr(numeric_only=True)["indice_violencia"].sort_values(ascending=False))
+
+
+#print(categorias)
+munidelitos_sex_agg = (muni_delitos_sex.groupby(["cole_mcpio_ubicacion", "año"], as_index=False).agg(Zona=("Zona", "first"),
+                                indice_delitos_sexuales=("indice_delitos_sexuales", "first"),**{col: (col, "mean") for col in categorias}))
+
+##################################################################################################################
+##############################################Índice Extorsión####################################################
+##################################################################################################################
+
+
+indice_largo = extorsion.melt(id_vars="cole_mcpio_ubicacion",value_vars=[2020, 2021, 2022, 2023, 2024]
+                                     ,var_name="año",value_name="indice_extorsion")
+        
+
+indice_largo["año"] = indice_largo["año"].astype(int)
+puntajes2020s["año"] = puntajes2020s["año"].astype(int)
+
+muni_extorsion =puntajes2020s.merge(indice_largo,on=["cole_mcpio_ubicacion", "año"],how="left")
+#print(muni_vio)
+#muni_vio.shape
+muniext=muni_extorsion.groupby(["cole_mcpio_ubicacion"])
+#muniext.describe()
+
+#print(munihomicidios.corr(numeric_only=True)["indice_violencia"].sort_values(ascending=False))
+
+
+#print(categorias)
+muniext_agg = (muni_extorsion.groupby(["cole_mcpio_ubicacion", "año"], as_index=False).agg(Zona=("Zona", "first"),
+                                indice_extorsion=("indice_extorsion", "first"),**{col: (col, "mean") for col in categorias}))
+
+##################################################################################################################
+##############################################Índice Amenazas#####################################################
+##################################################################################################################
+
+indice_largo = amenazas.melt(id_vars="cole_mcpio_ubicacion",value_vars=[2020, 2021, 2022, 2023, 2024]
+                                     ,var_name="año",value_name="indice_amenazas")
+        
+
+indice_largo["año"] = indice_largo["año"].astype(int)
+puntajes2020s["año"] = puntajes2020s["año"].astype(int)
+
+muni_amenazas =puntajes2020s.merge(indice_largo,on=["cole_mcpio_ubicacion", "año"],how="left")
+#print(muni_vio)
+#muni_vio.shape
+muni_amenazas_agrupadas=muni_amenazas.groupby(["cole_mcpio_ubicacion"])
+#muni_amenazas_agrupadas.describe()
+
+#print(munihomicidios.corr(numeric_only=True)["indice_violencia"].sort_values(ascending=False))
+
+
+#print(categorias)
+muni_amenazas_agg = (muni_amenazas.groupby(["cole_mcpio_ubicacion", "año"], as_index=False).agg(Zona=("Zona", "first"),
+                                indice_amenazas=("indice_amenazas", "first"),**{col: (col, "mean") for col in categorias}))
+
+##################################################################################################################
+##############################################Índice Hurtos#######################################################
+##################################################################################################################
+
+
+indice_largo = hurtos.melt(id_vars="cole_mcpio_ubicacion",value_vars=[2020, 2021, 2022, 2023, 2024]
+                                     ,var_name="año",value_name="indice_hurtos")
+        
+
+indice_largo["año"] = indice_largo["año"].astype(int)
+puntajes2020s["año"] = puntajes2020s["año"].astype(int)
+
+muni_hurtos =puntajes2020s.merge(indice_largo,on=["cole_mcpio_ubicacion", "año"],how="left")
+#print(muni_vio)
+#muni_vio.shape
+muni_hurtos_agrupados=muni_hurtos.groupby(["cole_mcpio_ubicacion"])
+muni_hurtos_agrupados.describe()
+
+#print(munihomicidios.corr(numeric_only=True)["indice_violencia"].sort_values(ascending=False))
+
+
+#print(categorias)
+muni_hurtos_agg = (muni_hurtos.groupby(["cole_mcpio_ubicacion", "año"], as_index=False).agg(Zona=("Zona", "first"),
+                                indice_hurtos=("indice_hurtos", "first"),**{col: (col, "mean") for col in categorias}))
 
 
 
@@ -428,6 +576,9 @@ munihomicidios_agg['indice_homicidios_ajustado'] = munihomicidios_agg['indice_ho
 ##################################################################################################################
 ##############################################Índice General Violencia############################################
 ##################################################################################################################
+
+
+
 
 
 anios=[2020, 2021, 2022, 2023, 2024]
@@ -456,16 +607,194 @@ munivio_agg = (muni_vio.groupby(["cole_mcpio_ubicacion", "año"], as_index=False
                                 indice_violencia=("indice_violencia", "first"),**{col: (col, "mean") for col in categorias}))
 
 
+##################################################################################################################
+##################################################################################################################
+############################################ Mapa Valle ##########################################################
+##################################################################################################################
+##################################################################################################################
+##################################################################################################################
+
+
+
+
+
+#arreglar datos
+REEMPLAZOS = {
+    "CALIMA": "CALIMA EL DARIEN",
+    "CALIMA (DARIEN)": "CALIMA EL DARIEN",
+    "BUGA": "GUADALAJARA DE BUGA",
+    "JAMUNDÍ": "JAMUNDI",
+    "ALCALÁ": "ALCALA",
+    "ANDALUCÍA": "ANDALUCIA",
+    "BOLÍVAR": "BOLIVAR",
+    "EL ÁGUILA": "EL AGUILA",
+    "GUACARÍ": "GUACARI",
+    "RIOFRÍO": "RIOFRIO",
+    "LA UNIÓN": "LA UNION",
+    "TULUÁ": "TULUA",
+}
+
+def normalizar(s: pd.Series) -> pd.Series:
+    return (s.astype(str).str.normalize("NFKD")
+            .str.encode("ascii", "ignore")
+            .str.decode("utf-8")
+            .str.upper()
+            .str.strip())
+
+def limpiar_nombre_mpio(s: pd.Series) -> pd.Series:
+    return normalizar(s).replace(REEMPLAZOS)
+
+
+
+#limpieza exhaustiva
+df = df[df["punt_global"].notna()].drop_duplicates().copy()
+df["año"] = df["periodo"].astype(str).str[:4].astype(int)
+df = df[df["año"] > 2014].copy()
+df["cole_mcpio_ubicacion"] = limpiar_nombre_mpio(df["cole_mcpio_ubicacion"])
+
+indicesviolencia = indicesviolencia.copy()
+indicesviolencia["cole_mcpio_ubicacion"] = limpiar_nombre_mpio(indicesviolencia["cole_mcpio_ubicacion"])
+
+anios = [2020, 2021, 2022, 2023, 2024]
+for y in anios:
+    indicesviolencia[y] = pd.to_numeric(indicesviolencia[y], errors="coerce")
+
+indice_largo = indicesviolencia.melt(
+    id_vars="cole_mcpio_ubicacion",
+    value_vars=anios,
+    var_name="año",
+    value_name="indice_violencia"
+)
+indice_largo["año"] = indice_largo["año"].astype(int)
+
+#merges
+puntajes2020s = df[df["año"] >= 2020].copy()
+
+punt_agg = (puntajes2020s
+            .groupby(["cole_mcpio_ubicacion", "año"], as_index=False)
+            .agg(punt_global=("punt_global", "mean")))
+
+munivio_agg = punt_agg.merge(
+    indice_largo,
+    on=["cole_mcpio_ubicacion", "año"],
+    how="left"
+)
+
+#geojson 
+gdf = gpd.read_file("valle.json")
+
+#cambiamos por si acaso
+if gdf.crs is None:
+    gdf = gdf.set_crs(epsg=4326)
+
+gdf = gdf.to_crs(epsg=4326)
+
+# arreglar geometrías inválidas o que fallan en los departamentos
+try:
+    gdf["geometry"] = gdf["geometry"].make_valid()
+except Exception:
+    gdf["geometry"] = gdf["geometry"].buffer(0)
+
+gdf = gdf[gdf.geometry.notna() & ~gdf.geometry.is_empty].copy()
+
+# normalizar nombre
+gdf["mpio_cnmbr"] = limpiar_nombre_mpio(gdf["mpio_cnmbr"])
+
+"""
+b = gdf.bounds.round(6)
+print("bounds únicas:", len(b.drop_duplicates()))
+print("top bounds duplicadas:\n", b.value_counts().head(10))
+
+wkts = gdf.geometry.apply(lambda geom: geom.wkt[:200])
+print("WKT únicas aprox:", wkts.nunique())
+print("top WKT duplicadas:\n", wkts.value_counts().head(10))
+"""
+#hacerlo de manera mas robusta para que encuentre y llene y no busque y se rinda 
+geojson_valle = json.loads(gdf.to_json())
+for feat in geojson_valle["features"]:
+    mpio = feat["properties"]["mpio_cnmbr"]
+    feat["id"] = mpio
+
+#por si acaso resivar
+anioesp = 2022
+map_df = munivio_agg[munivio_agg["año"] == anioesp].copy()
+map_df["mpio_id"] = map_df["cole_mcpio_ubicacion"]
+
+map_df["indice_violencia"] = pd.to_numeric(map_df["indice_violencia"], errors="coerce")
+map_df["punt_global"] = pd.to_numeric(map_df["punt_global"], errors="coerce")
+
+#print("No-NaN violencia:", map_df["indice_violencia"].notna().sum())
+#print("No-NaN punt_global:", map_df["punt_global"].notna().sum())
+
+map_df = (map_df.groupby("mpio_id", as_index=False)
+                .agg(indice_violencia=("indice_violencia", "mean"),
+                     punt_global=("punt_global", "mean")))
+
+print("Municipios DF mapa:", map_df["mpio_id"].nunique(), " | Geo features:", len(geojson_valle["features"]))
+
+
+#gráficos
+fig_vio = px.choropleth_mapbox(
+    map_df,
+    geojson=geojson_valle,
+    locations="mpio_id",
+    featureidkey="id",
+    color="indice_violencia",
+    hover_name="mpio_id",
+    mapbox_style="open-street-map",
+    center={"lat": 4.2, "lon": -76.3},
+    zoom=7,
+    opacity=0.7,
+    title=f"Índice de Violencia en el Valle ({anioesp})"
+)
+fig_vio.update_layout(margin={"r":0,"t":50,"l":0,"b":0})
+fig_vio.update_traces(marker_line_width=1, marker_line_color="black")
+
+fig_punt = px.choropleth_mapbox(
+    map_df,
+    geojson=geojson_valle,
+    locations="mpio_id",
+    featureidkey="id",
+    color="punt_global",
+    hover_name="mpio_id",
+    mapbox_style="open-street-map",
+    center={"lat": 4.2, "lon": -76.3},
+    zoom=7,
+    opacity=0.7,
+    title=f"Puntajes Globales Saber 11 ({anioesp})"
+)
+fig_punt.update_layout(margin={"r":0,"t":50,"l":0,"b":0})
+fig_punt.update_traces(marker_line_width=1, marker_line_color="black")
 
 
 
 
 
 
+##################################################################################################################
+##################################################################################################################
+############################################ Dash ################################################################
+##################################################################################################################
+##################################################################################################################
+##################################################################################################################
 
 
 
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+
+external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 server = app.server
+
+app.layout = html.Div([
+    html.H1("Dashboard de Educación y Violencia - Valle del Cauca",
+            style={"textAlign": "center", "marginBottom": "30px"}),
+
+    html.Div([
+        html.Div([dcc.Graph(id="graph-violencia", figure=fig_vio)], className="six columns"),
+        html.Div([dcc.Graph(id="graph-puntaje", figure=fig_punt)], className="six columns"),
+    ], className="row"),
+])
+
+if __name__ == "__main__":
+    app.run(debug=True)
