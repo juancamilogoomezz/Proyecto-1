@@ -14,6 +14,7 @@ import dash
 from dash import dcc  # dash core components
 from dash import html # dash html components
 import plotly.express as px
+from dash.dependencies import Input, Output
 
 
 df = pd.read_csv("Saber 11 Datos Valle.csv")
@@ -786,6 +787,9 @@ external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 server = app.server
 
+
+#Layout Estático
+"""
 app.layout = html.Div([
     html.H1("Dashboard de Educación y Violencia - Valle del Cauca",
             style={"textAlign": "center", "marginBottom": "30px"}),
@@ -795,6 +799,273 @@ app.layout = html.Div([
         html.Div([dcc.Graph(id="graph-puntaje", figure=fig_punt)], className="six columns"),
     ], className="row"),
 ])
+"""
 
-if __name__ == "__main__":
+##################################################################################################################
+##################################################################################################################
+##################################################################################################################
+#################################Layout con opciones para cambiar##################################
+##################################################################################################################
+##################################################################################################################
+##################################################################################################################
+
+
+
+"""
+# arreglar dfs para poder hacer graficos de escoger
+
+categorias = ["punt_ingles","punt_matematicas","punt_sociales_ciudadanas","punt_c_naturales",
+              "punt_lectura_critica","punt_global","Puntaje educacion padres","Puntaje recursos hogar"]
+
+indices_dict = {
+    "Homicidios": munihomicidios_agg.rename(columns={"indice_homicidios": "valor_indice"}),
+    "Lesiones personales": munilesionesp_agg.rename(columns={"indice_lesiones_personales": "valor_indice"}),
+    "Violencia intrafamiliar": muniviolencia_int_agg.rename(columns={"indice_violencia_intrafamiliar": "valor_indice"}),
+    "Delitos sexuales": munidelitos_sex_agg.rename(columns={"indice_delitos_sexuales": "valor_indice"}),
+    "Extorsión": muniext_agg.rename(columns={"indice_extorsion": "valor_indice"}),
+    "Amenazas": muni_amenazas_agg.rename(columns={"indice_amenazas": "valor_indice"}),
+    "Hurtos": muni_hurtos_agg.rename(columns={"indice_hurtos": "valor_indice"}),
+    "Violencia (general)": munivio_agg.rename(columns={"indice_violencia": "valor_indice"}),}
+
+indices_long = []
+for nombre, dfi in indices_dict.items():
+    tmp = dfi.copy()
+    tmp["tipo_indice"] = nombre
+    indices_long.append(tmp)
+
+indices_long = pd.concat(indices_long, ignore_index=True)
+
+indices_long["mpio_id"] = indices_long["cole_mcpio_ubicacion"]
+indices_long["año"] = indices_long["año"].astype(int)
+indices_long["valor_indice"] = pd.to_numeric(indices_long["valor_indice"], errors="coerce")
+"""
+
+"""
+
+app.layout = html.Div([
+    html.Div([
+
+        html.Div([
+            dcc.Dropdown(
+                id='xaxis-column',
+                options=[{'label': i, 'value': i} for i in available_indicators],
+                value='Fertility rate, total (births per woman)'
+            ),
+            dcc.RadioItems(
+                id='xaxis-type',
+                options=[{'label': i, 'value': i} for i in ['Linear', 'Log']],
+                value='Linear',
+                labelStyle={'display': 'inline-block'}
+            )
+        ],
+        style={'width': '48%', 'display': 'inline-block'}),
+
+        html.Div([
+            dcc.Dropdown(
+                id='yaxis-column',
+                options=[{'label': i, 'value': i} for i in available_indicators],
+                value='Life expectancy at birth, total (years)'
+            ),
+            dcc.RadioItems(
+                id='yaxis-type',
+                options=[{'label': i, 'value': i} for i in ['Linear', 'Log']],
+                value='Linear',
+                labelStyle={'display': 'inline-block'}
+            )
+        ],style={'width': '48%', 'float': 'right', 'display': 'inline-block'})
+    ]),
+
+    dcc.Graph(id='indicator-graphic'),
+
+    dcc.Slider(
+        id='year--slider',
+        min=df['Year'].min(),
+        max=df['Year'].max(),
+        value=df['Year'].max(),
+        marks={str(year): str(year) for year in df['Year'].unique()},
+        step=None
+    )
+])
+
+
+
+"""
+
+app.layout = html.Div([
+
+    html.H1("Dashboard Educación y Violencia - Valle del Cauca",
+            style={"textAlign": "center"}),
+
+    html.Div([
+
+        html.Div([
+            html.Label("Seleccione índice de violencia"),
+            dcc.Dropdown(
+                id="dd-indice",
+                options=[
+                    {"label": "Índice Violencia General", "value": "indice_violencia"},
+                    {"label": "Índice Homicidios", "value": "indice_homicidios"},
+                    {"label": "Índice Lesiones Personales", "value": "indice_lesiones_personales"},
+                    {"label": "Índice Violencia Intrafamiliar", "value": "indice_violencia_intrafamiliar"},
+                    {"label": "Índice Delitos Sexuales", "value": "indice_delitos_sexuales"},
+                    {"label": "Índice Extorsión", "value": "indice_extorsion"},
+                    {"label": "Índice Amenazas", "value": "indice_amenazas"},
+                    {"label": "Índice Hurtos", "value": "indice_hurtos"},],
+                value="indice_violencia",
+                clearable=False)], 
+            className="six columns"),
+
+        html.Div([
+            html.Label("Escoja una de las Categorías actuales de la Prueba Saber 11"),
+            dcc.Dropdown(
+                id="dd-puntaje",
+                options=[{"label": c.replace("_"," ").title().replace("punt","").upper(), "value": c} for c in categorias],
+                value="punt_global",
+                clearable=False)], 
+            className="six columns"),], 
+        className="row"),
+
+    #Para 
+    html.Br(),
+
+    html.Div([
+        html.Div([dcc.Graph(id="graph-violencia")], className="six columns"),
+        html.Div([dcc.Graph(id="graph-puntaje")], className="six columns"),], 
+        className="row")])
+
+
+
+
+"""
+
+@app.callback(
+    Output('indicator-graphic', 'figure'),
+    [Input('xaxis-column', 'value'),
+     Input('yaxis-column', 'value'),
+     Input('xaxis-type', 'value'),
+     Input('yaxis-type', 'value'),
+     Input('year--slider', 'value')])
+def update_graph(xaxis_column_name, yaxis_column_name,
+                 xaxis_type, yaxis_type,
+                 year_value):
+    dff = df[df['Year'] == year_value]
+
+    fig = px.scatter(x=dff[dff['Indicator Name'] == xaxis_column_name]['Value'],
+                     y=dff[dff['Indicator Name'] == yaxis_column_name]['Value'],
+                     hover_name=dff[dff['Indicator Name'] == yaxis_column_name]['Country Name'])
+
+    fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 0}, hovermode='closest')
+
+    fig.update_xaxes(title=xaxis_column_name, 
+                     type='linear' if xaxis_type == 'Linear' else 'log') 
+
+    fig.update_yaxes(title=yaxis_column_name, 
+                     type='linear' if yaxis_type == 'Linear' else 'log') 
+
+    return fig
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
+"""
+
+@app.callback(
+    Output("graph-violencia", "figure"),
+    Output("graph-puntaje", "figure"),
+    Input("dd-indice", "value"),
+    Input("dd-puntaje", "value")
+)
+
+def mapas_diferentes(tipo_indice, tipo_puntaje):
+
+    #se pone fijo pq no hay suficientes datos para que en 2021 o 2020 se
+    #pueda armar el mapa completo
+    aniooo = 2022 
+
+    
+    if tipo_indice == "indice_violencia":
+
+        df_base = munivio_agg
+        titulo= "Mapa de Calor Valle del Cauca: Índice Violencia General 2022 "
+
+    elif tipo_indice == "indice_homicidios":
+
+        df_base = munihomicidios_agg
+        titulo= "Mapa de Calor Valle del Cauca: Índice Homicidios 2022 "
+
+
+    elif tipo_indice == "indice_lesiones_personales":
+
+        df_base = munilesionesp_agg
+        titulo= "Mapa de Calor Valle del Cauca: Índice Lesiones Personales 2022 "
+
+    elif tipo_indice == "indice_violencia_intrafamiliar":
+
+        df_base = muniviolencia_int_agg
+        titulo= "Mapa de Calor Valle del Cauca: Índice Violencia Intrafamiliar 2022 "
+
+    elif tipo_indice == "indice_delitos_sexuales":
+
+        df_base = munidelitos_sex_agg
+        titulo= "Mapa de Calor Valle del Cauca: Índice Delitos Sexuales 2022 "
+
+    elif tipo_indice == "indice_extorsion":
+
+        df_base = muniext_agg
+        titulo= "Mapa de Calor Valle del Cauca: Índice Extorsión 2022 "
+
+    elif tipo_indice == "indice_amenazas":
+
+        df_base = muni_amenazas_agg
+        titulo= "Mapa de Calor Valle del Cauca: Índice Amenazas 2022 "
+
+    else:
+
+        df_base = muni_hurtos_agg
+        titulo= "Mapa de Calor Valle del Cauca: Índice Hurtos 2022 "
+
+    dff = df_base[df_base["año"] == aniooo].copy()
+    dff["mpio_id"] = dff["cole_mcpio_ubicacion"]
+
+
+    #Mapa Violencia
+    fig_vio = px.choropleth_mapbox(
+        dff,
+        geojson=geojson_valle,
+        locations="mpio_id",
+        featureidkey="id",
+        color=tipo_indice,
+        hover_name="mpio_id",
+        mapbox_style="open-street-map",
+        center={"lat": 4.2, "lon": -76.3},
+        zoom=7,
+        opacity=0.7,
+        title=titulo)
+
+
+    fig_vio.update_layout(margin={"r":0,"t":50,"l":0,"b":0})
+    fig_vio.update_traces(marker_line_width=1, marker_line_color="black")
+
+
+    #Mapa Puntajes
+    fig_punt = px.choropleth_mapbox(
+        dff,
+        geojson=geojson_valle,
+        locations="mpio_id",
+        featureidkey="id",
+        color=tipo_puntaje,
+        hover_name="mpio_id",
+        mapbox_style="open-street-map",
+        center={"lat": 4.2, "lon": -76.3},
+        zoom=7,
+        opacity=0.7,
+        title=f"{tipo_puntaje.replace('_',' ').replace('punt','').title()} ({aniooo})")
+
+    fig_punt.update_layout(margin={"r":0,"t":50,"l":0,"b":0})
+    fig_punt.update_traces(marker_line_width=1, marker_line_color="black")
+
+    return fig_vio, fig_punt
+
+
+if __name__ == '__main__':
     app.run(debug=True)
