@@ -646,7 +646,7 @@ def limpiar_nombre_mpio(s: pd.Series) -> pd.Series:
     return normalizar(s).replace(REEMPLAZOS)
 
 
-
+"""
 #limpieza exhaustiva
 df = df[df["punt_global"].notna()].drop_duplicates().copy()
 df["año"] = df["periodo"].astype(str).str[:4].astype(int)
@@ -675,11 +675,18 @@ punt_agg = (puntajes2020s
             .groupby(["cole_mcpio_ubicacion", "año"], as_index=False)
             .agg(punt_global=("punt_global", "mean")))
 
-munivio_agg = punt_agg.merge(
-    indice_largo,
-    on=["cole_mcpio_ubicacion", "año"],
-    how="left"
-)
+
+
+muni_vio = puntajes2020s.merge(indice_largo, on=["cole_mcpio_ubicacion", "año"], how="left")
+
+munivio_agg = (muni_vio.groupby(["cole_mcpio_ubicacion", "año"], as_index=False)
+               .agg(
+                   Zona=("Zona", "first"),
+                   indice_violencia=("indice_violencia", "first"),
+                   **{col: (col, "mean") for col in categorias}
+               ))
+"""
+
 
 #geojson 
 gdf = gpd.read_file("valle.json")
@@ -811,7 +818,7 @@ app.layout = html.Div([
 
 
 
-"""
+
 # arreglar dfs para poder hacer graficos de escoger
 
 categorias = ["punt_ingles","punt_matematicas","punt_sociales_ciudadanas","punt_c_naturales",
@@ -838,7 +845,7 @@ indices_long = pd.concat(indices_long, ignore_index=True)
 indices_long["mpio_id"] = indices_long["cole_mcpio_ubicacion"]
 indices_long["año"] = indices_long["año"].astype(int)
 indices_long["valor_indice"] = pd.to_numeric(indices_long["valor_indice"], errors="coerce")
-"""
+
 
 """
 
@@ -925,13 +932,24 @@ app.layout = html.Div([
             className="six columns"),], 
         className="row"),
 
-    #Para 
+     
     html.Br(),
 
     html.Div([
         html.Div([dcc.Graph(id="graph-violencia")], className="six columns"),
         html.Div([dcc.Graph(id="graph-puntaje")], className="six columns"),], 
-        className="row")])
+        className="row"),
+        html.Br(),
+
+    dcc.Graph(id="graph-corr", style={"height": "70vh"}),
+
+    html.Div(
+        id="texto-correlacion",
+        style={
+            "textAlign": "center",
+            "fontSize": "22px",
+            "fontWeight": "bold",
+            "marginTop": "10px",})])
 
 
 
@@ -972,6 +990,8 @@ if __name__ == '__main__':
 @app.callback(
     Output("graph-violencia", "figure"),
     Output("graph-puntaje", "figure"),
+    Output("graph-corr", "figure"),
+    Output("texto-correlacion", "children"),
     Input("dd-indice", "value"),
     Input("dd-puntaje", "value")
 )
@@ -1059,12 +1079,58 @@ def mapas_diferentes(tipo_indice, tipo_puntaje):
         center={"lat": 4.2, "lon": -76.3},
         zoom=7,
         opacity=0.7,
+        color_continuous_scale="cividis",
         title=f"{tipo_puntaje.replace('_',' ').replace('punt','').title()} ({aniooo})")
 
     fig_punt.update_layout(margin={"r":0,"t":50,"l":0,"b":0})
     fig_punt.update_traces(marker_line_width=1, marker_line_color="black")
 
-    return fig_vio, fig_punt
+
+
+
+    df_dispersion = df_base.copy()
+    df_dispersion["mpio"] = df_dispersion["cole_mcpio_ubicacion"]
+    df_dispersion["año"] =  pd.to_numeric(df_dispersion["año"], errors="coerce")
+
+    columnas=["mpio","año","Zona"]
+
+    dispersion_df_agrup = (df_dispersion
+        .groupby("mpio", as_index=False)
+        .agg(
+            Zona=("Zona", "first"),
+            x_puntaje=(tipo_puntaje, "mean"),
+            y_indice=(tipo_indice, "mean"),
+        ))
+
+    fig_corr = px.scatter(
+        dispersion_df_agrup,
+        x="x_puntaje",
+        y="y_indice",
+        color="Zona",
+        hover_name="mpio",   
+        hover_data={"Zona": True,"x_puntaje": ":.2f","y_indice": ":.2f","mpio": False},                
+        opacity=0.75,
+        title=f"Correlación entre {tipo_puntaje.replace('_',' ').replace('punt','').title()} y {tipo_indice.replace('_',' ').replace('indice','Índice').title()}",
+        labels=({"x_puntaje": tipo_puntaje.replace("_"," ").replace("punt","").title(),
+                "y_indice":  tipo_indice.replace("_"," ").replace("indice","Índice").title()}))
+
+    
+
+    
+    fig_corr.update_layout(height=650, margin={"r":30,"t":90,"l":60,"b":60})
+    numero = dispersion_df_agrup["x_puntaje"].corr(dispersion_df_agrup["y_indice"])
+    texto_corr = f"Correlación = {numero:.3f}"
+
+    return fig_vio, fig_punt, fig_corr, texto_corr
+
+
+
+    
+
+
+
+
+
 
 
 if __name__ == '__main__':
