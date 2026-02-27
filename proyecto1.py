@@ -14,8 +14,9 @@ import dash
 from dash import dcc  # dash core components
 from dash import html # dash html components
 import plotly.express as px
+from plotly.subplots import make_subplots
 from dash.dependencies import Input, Output
-
+import plotly.graph_objects as go
 
 df = pd.read_csv("Saber 11 Datos Valle.csv")
 indicesviolencia = pd.read_excel("Violencia Valle del Cauca Indices con Página con todo junto.xlsx",sheet_name="Indices")
@@ -88,8 +89,7 @@ df=df[df["año"].astype(int)>2014]
 #print(df["estu_fechanacimiento"].sort_values().head(50))
 #print(df["estu_fechanacimiento"].sort_values().tail(10))
 
-reemplazos = {
-    "CALIMA": "CALIMA EL DARIEN",
+reemplazos = {"CALIMA": "CALIMA EL DARIEN",
     "CALIMA (DARIEN)": "CALIMA EL DARIEN",
     "BUGA": "GUADALAJARA DE BUGA",
     "JAMUNDÍ": "JAMUNDI",
@@ -100,8 +100,7 @@ reemplazos = {
     "GUACARÍ": "GUACARI",
     "RIOFRÍO": "RIOFRIO",
     "LA UNIÓN": "LA UNION",
-    "TULUÁ": "TULUA"
-}
+    "TULUÁ": "TULUA"}
 
 df["cole_mcpio_ubicacion"] = df["cole_mcpio_ubicacion"].replace(reemplazos)
 
@@ -177,8 +176,7 @@ else:
     df["desemp_ingles"]=df["desemp_ingles"].fillna("B+")
 """
 
-condiciones = [
-    df["punt_ingles"] < 27,
+condiciones = [df["punt_ingles"] < 27,
     df["punt_ingles"] <= 40,
     df["punt_ingles"] < 55]
 valores = ["A1", "A2", "B1"]
@@ -198,7 +196,6 @@ df["estu_cod_reside_mcpio"].replace({'EL CERRITO': 76248}, inplace=True)
 df["estu_cod_reside_mcpio"].replace({'JAMUNDÍ': 76364}, inplace=True)
 df["estu_cod_reside_mcpio"].replace({'YUMBO': 76892}, inplace=True)
 df["año"]=df["periodo"].astype(str).str[:4]
-
 df=df[df["año"].astype(int)>2014]
 #df.isna().sum()
 
@@ -256,30 +253,16 @@ puntajes["Puntaje Desempeño ingles"] = puntajes["desemp_ingles"].map({"A-":0,"A
 
 
 puntajes["desemp_ingles"].value_counts()
-
-"""
-
-
-
-"""
-
 def normalizar(s):
     return (s.str.normalize("NFKD")
                 .str.encode("ascii","ignore")
                 .str.decode("utf-8").str.upper()
                 .str.strip())
-
-
-
-
-
 puntajes["cole_mcpio_ubicacion"] = (df["cole_mcpio_ubicacion"].pipe(normalizar))
 puntajes["cole_mcpio_ubicacion"] = puntajes["cole_mcpio_ubicacion"].replace(["CALIMA (DARIEN)", "CALIMA"], "CALIMA EL DARIEN")
-
 mapazonas= {
     # Zona Pacífico 
     "BUENAVENTURA": "Pacífico",
-
     # Zona Centro
     "CALIMA EL DARIEN": "Centro",
     "YOTOCO": "Centro",
@@ -289,7 +272,6 @@ mapazonas= {
     "GUACARI": "Centro",
     "GINEBRA": "Centro",
     "EL CERRITO": "Centro",
-
     # Zona Sur 
     "DAGUA": "Sur",
     "LA CUMBRE": "Sur",
@@ -302,7 +284,6 @@ mapazonas= {
     "FLORIDA": "Sur",
     "JAMUNDI": "Sur",
     "RESTREPO": "Sur",
-
     # Zona Norte
     "ALCALA": "Norte",
     "ULLOA": "Norte",
@@ -326,8 +307,7 @@ mapazonas= {
     "BUGALAGRANDE": "Norte",
     "TULUA": "Norte",
     "SEVILLA": "Norte",
-    "CAICEDONIA": "Norte",
-}
+    "CAICEDONIA": "Norte"}
 
 puntajes["Zona"] = puntajes["cole_mcpio_ubicacion"].map(mapazonas)
 #print(municipios.groupby("Zona").size())
@@ -363,28 +343,17 @@ for i in puntajes.columns:
 
 municipiosss= df.copy()
 """
-
-
 #puntajes_solonum.columns
-
 puntajes["Puntaje bilingue"].fillna(puntajes["Puntaje bilingue"].mode()[0],inplace=True)
-
 ordenlogico = ["Puntaje Educación Madre","Puntaje Educación Padre","Puntaje Personas Hogar","Puntaje Cuartos Hogar"]
-
 for col in ordenlogico:
     puntajes[col] = puntajes[col].fillna(puntajes.groupby("fami_estratovivienda")[col].transform("mean"))
-
-
-
 puntajes["año"] = puntajes["año"].astype(int)
 puntajes["Puntaje educacion padres"] = puntajes["Puntaje Educación Padre"]+puntajes["Puntaje Educación Madre"]
 puntajes["Puntaje recursos hogar"] = puntajes["Puntaje Automóvil"]+puntajes["Puntaje Computador"]+puntajes["Puntaje Lavadora"]
 #puntajes["Puntaje Genero"] = puntajes["estu_genero"].map({"M": 0, "F": 1})
-
-
 puntajes_solonum = puntajes.iloc[:, 45:].copy()
 puntajes2020s=puntajes[puntajes["año"].astype(int)>=2020]
-
 ##################################################################################################################
 ##################################################################################################################
 ############################################Violencia#############################################################
@@ -396,142 +365,92 @@ categorias = ["punt_ingles","punt_matematicas","punt_sociales_ciudadanas","punt_
 ##################################################################################################################
 ##############################################Índice Homicidios###################################################
 ##################################################################################################################
-
 indice_largo = homicidios.melt(id_vars="cole_mcpio_ubicacion",value_vars=[2020, 2021, 2022, 2023, 2024]
                                      ,var_name="año",value_name="indice_homicidios")
-        
-
 indice_largo["año"] = indice_largo["año"].astype(int)
 puntajes2020s["año"] = puntajes2020s["año"].astype(int)
-
 muni_homicidios =puntajes2020s.merge(indice_largo,on=["cole_mcpio_ubicacion", "año"],how="left")
 #print(muni_vio)
 #muni_vio.shape
 #munihomicidios=muni_homicidios.groupby(["cole_mcpio_ubicacion"])
 #munihomicidios.describe()
-
 #print(munihomicidios.corr(numeric_only=True)["indice_violencia"].sort_values(ascending=False))
-
-
 #print(categorias)
 munihomicidios_agg = (muni_homicidios.groupby(["cole_mcpio_ubicacion", "año"], as_index=False).agg(Zona=("Zona", "first"),
                                 indice_homicidios=("indice_homicidios", "first"),**{col: (col, "mean") for col in categorias}))
-
-
 limite_superior = munihomicidios_agg['indice_homicidios'].quantile(0.90)
-
 munihomicidios_agg['indice_homicidios_ajustado'] = munihomicidios_agg['indice_homicidios'].clip(upper=limite_superior)
-
 ##################################################################################################################
 ##############################################Índice Lesiones Personales##########################################
 ##################################################################################################################
-
-
 indice_largo = lesionesp.melt(id_vars="cole_mcpio_ubicacion",value_vars=[2020, 2021, 2022, 2023, 2024]
                                      ,var_name="año",value_name="indice_lesiones_personales")
-        
-
 indice_largo["año"] = indice_largo["año"].astype(int)
 puntajes2020s["año"] = puntajes2020s["año"].astype(int)
-
 muni_lesionesp =puntajes2020s.merge(indice_largo,on=["cole_mcpio_ubicacion", "año"],how="left")
 #print(muni_vio)
 #muni_vio.shape
 munilesionesp=muni_lesionesp.groupby(["cole_mcpio_ubicacion"])
 #munilesionesp.describe()
-
 #print(munihomicidios.corr(numeric_only=True)["indice_violencia"].sort_values(ascending=False))
-
-
 #print(categorias)
 munilesionesp_agg = (muni_lesionesp.groupby(["cole_mcpio_ubicacion", "año"], as_index=False).agg(Zona=("Zona", "first"),
                                 indice_lesiones_personales=("indice_lesiones_personales", "first"),**{col: (col, "mean") for col in categorias}))
-
 ##################################################################################################################
 ##############################################Índice Violencia Intrafamiliar######################################
 ##################################################################################################################
-
 indice_largo = violencia_int.melt(id_vars="cole_mcpio_ubicacion",value_vars=[2020, 2021, 2022, 2023, 2024]
                                      ,var_name="año",value_name="indice_violencia_intrafamiliar")
-        
-
 indice_largo["año"] = indice_largo["año"].astype(int)
 puntajes2020s["año"] = puntajes2020s["año"].astype(int)
-
 muni_violencia_int =puntajes2020s.merge(indice_largo,on=["cole_mcpio_ubicacion", "año"],how="left")
 #print(muni_vio)
 #muni_vio.shape
 muniviolencia_int=muni_violencia_int.groupby(["cole_mcpio_ubicacion"])
 #muniviolencia_int.describe()
-
 #print(munihomicidios.corr(numeric_only=True)["indice_violencia"].sort_values(ascending=False))
-
-
 #print(categorias)
 muniviolencia_int_agg = (muni_violencia_int.groupby(["cole_mcpio_ubicacion", "año"], as_index=False).agg(Zona=("Zona", "first"),
                                 indice_violencia_intrafamiliar=("indice_violencia_intrafamiliar", "first"),**{col: (col, "mean") for col in categorias}))
-
 ##################################################################################################################
 ##############################################Índice Delitos Sexuales#############################################
 ##################################################################################################################
-
-
 indice_largo = delitos_sex.melt(id_vars="cole_mcpio_ubicacion",value_vars=[2020, 2021, 2022, 2023, 2024]
                                      ,var_name="año",value_name="indice_delitos_sexuales")
-        
-
 indice_largo["año"] = indice_largo["año"].astype(int)
 puntajes2020s["año"] = puntajes2020s["año"].astype(int)
-
 muni_delitos_sex =puntajes2020s.merge(indice_largo,on=["cole_mcpio_ubicacion", "año"],how="left")
 #print(muni_vio)
 #muni_vio.shape
 munidelitos_sex=muni_delitos_sex.groupby(["cole_mcpio_ubicacion"])
 #munidelitos_sex.describe()
-
 #print(munihomicidios.corr(numeric_only=True)["indice_violencia"].sort_values(ascending=False))
-
-
 #print(categorias)
 munidelitos_sex_agg = (muni_delitos_sex.groupby(["cole_mcpio_ubicacion", "año"], as_index=False).agg(Zona=("Zona", "first"),
                                 indice_delitos_sexuales=("indice_delitos_sexuales", "first"),**{col: (col, "mean") for col in categorias}))
-
 ##################################################################################################################
 ##############################################Índice Extorsión####################################################
 ##################################################################################################################
-
-
 indice_largo = extorsion.melt(id_vars="cole_mcpio_ubicacion",value_vars=[2020, 2021, 2022, 2023, 2024]
                                      ,var_name="año",value_name="indice_extorsion")
-        
-
 indice_largo["año"] = indice_largo["año"].astype(int)
 puntajes2020s["año"] = puntajes2020s["año"].astype(int)
-
 muni_extorsion =puntajes2020s.merge(indice_largo,on=["cole_mcpio_ubicacion", "año"],how="left")
 #print(muni_vio)
 #muni_vio.shape
 muniext=muni_extorsion.groupby(["cole_mcpio_ubicacion"])
 #muniext.describe()
-
 #print(munihomicidios.corr(numeric_only=True)["indice_violencia"].sort_values(ascending=False))
-
-
 #print(categorias)
 muniext_agg = (muni_extorsion.groupby(["cole_mcpio_ubicacion", "año"], as_index=False).agg(Zona=("Zona", "first"),
                                 indice_extorsion=("indice_extorsion", "first"),**{col: (col, "mean") for col in categorias}))
-
 ##################################################################################################################
 ##############################################Índice Amenazas#####################################################
 ##################################################################################################################
-
 indice_largo = amenazas.melt(id_vars="cole_mcpio_ubicacion",value_vars=[2020, 2021, 2022, 2023, 2024]
                                      ,var_name="año",value_name="indice_amenazas")
-        
-
 indice_largo["año"] = indice_largo["año"].astype(int)
 puntajes2020s["año"] = puntajes2020s["año"].astype(int)
-
 muni_amenazas =puntajes2020s.merge(indice_largo,on=["cole_mcpio_ubicacion", "año"],how="left")
 #print(muni_vio)
 #muni_vio.shape
@@ -569,11 +488,6 @@ muni_hurtos_agrupados.describe()
 #print(categorias)
 muni_hurtos_agg = (muni_hurtos.groupby(["cole_mcpio_ubicacion", "año"], as_index=False).agg(Zona=("Zona", "first"),
                                 indice_hurtos=("indice_hurtos", "first"),**{col: (col, "mean") for col in categorias}))
-
-
-
-
-
 
 ##################################################################################################################
 ##############################################Índice General Violencia############################################
@@ -616,10 +530,6 @@ munivio_agg = (muni_vio.groupby(["cole_mcpio_ubicacion", "año"], as_index=False
 ##################################################################################################################
 ##################################################################################################################
 
-
-
-
-
 #arreglar datos
 REEMPLAZOS = {
     "CALIMA": "CALIMA EL DARIEN",
@@ -633,8 +543,7 @@ REEMPLAZOS = {
     "GUACARÍ": "GUACARI",
     "RIOFRÍO": "RIOFRIO",
     "LA UNIÓN": "LA UNION",
-    "TULUÁ": "TULUA",
-}
+    "TULUÁ": "TULUA"}
 
 def normalizar(s: pd.Series) -> pd.Series:
     return (s.astype(str).str.normalize("NFKD")
@@ -642,7 +551,6 @@ def normalizar(s: pd.Series) -> pd.Series:
             .str.decode("utf-8")
             .str.upper()
             .str.strip())
-
 def limpiar_nombre_mpio(s: pd.Series) -> pd.Series:
     return normalizar(s).replace(REEMPLAZOS)
 
@@ -688,17 +596,19 @@ munivio_agg = (muni_vio.groupby(["cole_mcpio_ubicacion", "año"], as_index=False
                ))
 """
 
-
 #geojson 
 gdf = gpd.read_file("valle.json")
 
+###########################################################################################################################
+##############################################Ayuda Gabriel H.A############################################################
+###########################################################################################################################
 #cambiamos por si acaso
 if gdf.crs is None:
     gdf = gdf.set_crs(epsg=4326)
 
 gdf = gdf.to_crs(epsg=4326)
-
 # arreglar geometrías inválidas o que fallan en los departamentos
+
 try:
     gdf["geometry"] = gdf["geometry"].make_valid()
 except Exception:
@@ -718,13 +628,25 @@ wkts = gdf.geometry.apply(lambda geom: geom.wkt[:200])
 print("WKT únicas aprox:", wkts.nunique())
 print("top WKT duplicadas:\n", wkts.value_counts().head(10))
 """
+
 #hacerlo de manera mas robusta para que encuentre y llene y no busque y se rinda 
 geojson_valle = json.loads(gdf.to_json())
 for feat in geojson_valle["features"]:
     mpio = feat["properties"]["mpio_cnmbr"]
     feat["id"] = mpio
 
-#por si acaso resivar
+
+###########################################################################################################################
+############################################## Ayuda Gabriel H.A ##########################################################
+###########################################################################################################################
+
+
+
+
+##############################################################################################################################
+############################################inicio trabajar dash jc###########################################################
+##############################################################################################################################
+
 anioesp = 2022
 map_df = munivio_agg[munivio_agg["año"] == anioesp].copy()
 map_df["mpio_id"] = map_df["cole_mcpio_ubicacion"]
@@ -754,8 +676,10 @@ fig_vio = px.choropleth_mapbox(
     center={"lat": 4.2, "lon": -76.3},
     zoom=7,
     opacity=0.7,
-    title=f"Índice de Violencia en el Valle ({anioesp})"
-)
+    title=f"Índice de Violencia en el Valle ({anioesp})")
+
+
+
 fig_vio.update_layout(margin={"r":0,"t":50,"l":0,"b":0})
 fig_vio.update_traces(marker_line_width=1, marker_line_color="black")
 
@@ -777,7 +701,7 @@ fig_punt.update_traces(marker_line_width=1, marker_line_color="black")
 
 ##################################################################################################################
 ##################################################################################################################
-############################################ Preparación df_trampa ###############################################
+############################################ Dash Jerónimo Pregunta 2 ############################################
 ##################################################################################################################
 ##################################################################################################################
 ##################################################################################################################
@@ -786,16 +710,14 @@ fig_punt.update_traces(marker_line_width=1, marker_line_color="black")
 
 ORDEN_ESTRATO = [
     "Estrato 1", "Estrato 2", "Estrato 3", "Estrato 4",
-    "Estrato 5", "Estrato 6", "Sin Estrato"
-]
+    "Estrato 5", "Estrato 6", "Sin Estrato"]
 
 ORDEN_EDU = [
     "Ninguno", "Primaria incompleta", "Primaria completa",
     "Secundaria (Bachillerato) incompleta", "Secundaria (Bachillerato) completa",
     "Técnica o tecnológica incompleta", "Técnica o tecnológica completa",
     "Educación profesional incompleta", "Educación profesional completa",
-    "Postgrado", "No sabe", "No Aplica"
-]
+    "Postgrado", "No sabe", "No Aplica"]
 
 COLS_TRAMPA = [
     "fami_estratovivienda", "cole_naturaleza", "fami_educacionmadre",
@@ -803,91 +725,55 @@ COLS_TRAMPA = [
     "cole_area_ubicacion", "fami_tieneinternet", "fami_tienecomputador",
     "fami_tienelavadora", "punt_ingles", "punt_matematicas",
     "punt_sociales_ciudadanas", "punt_c_naturales", "punt_lectura_critica",
-    "punt_global"
-]
+    "punt_global"]
 
 df_trampa = df[COLS_TRAMPA].copy()
 
 df_trampa["fami_estratovivienda"] = (
     df_trampa["fami_estratovivienda"]
-    .astype("string").str.strip().fillna("Sin información")
-)
+    .astype("string").str.strip().fillna("Sin información"))
 
 for col in ["cole_bilingue", "cole_jornada", "cole_naturaleza",
             "cole_area_ubicacion", "fami_tieneinternet",
             "fami_tienecomputador", "fami_tienelavadora"]:
     df_trampa[col] = (
-        df_trampa[col].astype("string").str.strip().str.upper().fillna("SIN INFO")
-    )
+        df_trampa[col].astype("string").str.strip().str.upper().fillna("SIN INFO"))
 
 for col in ["fami_educacionmadre", "fami_educacionpadre"]:
     df_trampa[col] = (
-        df_trampa[col].astype("string").str.strip().fillna("Sin información")
-    )
+        df_trampa[col].astype("string").str.strip().fillna("Sin información"))
 
 PUNTAJES_COLS = [
     "punt_ingles", "punt_matematicas", "punt_sociales_ciudadanas",
-    "punt_c_naturales", "punt_lectura_critica", "punt_global"
-]
+    "punt_c_naturales", "punt_lectura_critica", "punt_global"]
+
 for col in PUNTAJES_COLS:
     df_trampa[col] = pd.to_numeric(df_trampa[col], errors="coerce")
 
-VARIABLES_X = {
-    "Bilingüismo": {
-        "col": "cole_bilingue",
-        "orden": ["N", "S"],
-        "labels": {"N": "No bilingüe", "S": "Bilingüe"}
-    },
-    "Jornada": {
-        "col": "cole_jornada",
-        "orden": ["MAÑANA", "TARDE", "COMPLETA", "UNICA", "NOCHE", "SABATINA"],
-        "labels": {}
-    },
-    "Naturaleza del colegio": {
-        "col": "cole_naturaleza",
-        "orden": ["OFICIAL", "NO OFICIAL"],
-        "labels": {"OFICIAL": "Oficial", "NO OFICIAL": "No oficial (Privado)"}
-    },
-    "Área (Urbano/Rural)": {
-        "col": "cole_area_ubicacion",
-        "orden": ["URBANO", "RURAL"],
-        "labels": {"URBANO": "Urbano", "RURAL": "Rural"}
-    },
-    "Internet en el hogar": {
-        "col": "fami_tieneinternet",
-        "orden": ["SI", "NO"],
-        "labels": {"SI": "Tiene internet", "NO": "No tiene internet"}
-    },
-    "Computador en el hogar": {
-        "col": "fami_tienecomputador",
-        "orden": ["SI", "NO"],
-        "labels": {"SI": "Tiene computador", "NO": "No tiene computador"}
-    },
-    "Lavadora en el hogar": {
-        "col": "fami_tienelavadora",
-        "orden": ["SI", "NO"],
-        "labels": {"SI": "Tiene lavadora", "NO": "No tiene lavadora"}
-    },
-    "Educación de la madre": {
-        "col": "fami_educacionmadre",
-        "orden": ORDEN_EDU,
-        "labels": {}
-    },
-    "Educación del padre": {
-        "col": "fami_educacionpadre",
-        "orden": ORDEN_EDU,
-        "labels": {}
-    },
-}
+VARIABLES_X = {"Bilingüismo": {"col": "cole_bilingue","orden": ["N", "S"],"labels": {"N": "No bilingüe", "S": "Bilingüe"}},
 
-PUNTAJES_LABELS = {
-    "punt_global": "Puntaje Global",
+    "Jornada": {"col": "cole_jornada","orden": ["MAÑANA", "TARDE", "COMPLETA", "UNICA", "NOCHE", "SABATINA"],"labels": {}},
+
+    "Naturaleza del colegio": {"col": "cole_naturaleza","orden": ["OFICIAL", "NO OFICIAL"],"labels": {"OFICIAL": "Oficial", "NO OFICIAL": "No oficial (Privado)"}},
+
+    "Área (Urbano/Rural)": {"col": "cole_area_ubicacion","orden": ["URBANO", "RURAL"],"labels": {"URBANO": "Urbano", "RURAL": "Rural"}},
+
+    "Internet en el hogar": {"col": "fami_tieneinternet","orden": ["SI", "NO"],"labels": {"SI": "Tiene internet", "NO": "No tiene internet"}},
+
+    "Computador en el hogar": {"col": "fami_tienecomputador","orden": ["SI", "NO"],"labels": {"SI": "Tiene computador", "NO": "No tiene computador"}},
+
+    "Lavadora en el hogar": {"col": "fami_tienelavadora","orden": ["SI", "NO"],"labels": {"SI": "Tiene lavadora", "NO": "No tiene lavadora"}},
+
+    "Educación de la madre": {"col": "fami_educacionmadre","orden": ORDEN_EDU,"labels": {}},
+
+    "Educación del padre": {"col": "fami_educacionpadre","orden": ORDEN_EDU,"labels": {}},}
+
+PUNTAJES_LABELS = {"punt_global": "Puntaje Global",
     "punt_matematicas": "Matemáticas",
     "punt_ingles": "Inglés",
     "punt_lectura_critica": "Lectura Crítica",
     "punt_c_naturales": "Ciencias Naturales",
-    "punt_sociales_ciudadanas": "Sociales y Ciudadanas",
-}
+    "punt_sociales_ciudadanas": "Sociales y Ciudadanas",}
 
 COLS_EDU_NUM = ["Puntaje Educación Madre", "Puntaje Educación Padre", "Puntaje educacion padres"]
 for col in COLS_EDU_NUM:
@@ -910,11 +796,10 @@ external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 server = app.server
 
-
 #Layout Estático
 """
 app.layout = html.Div([
-    html.H1("Dashboard de Educación y Violencia - Valle del Cauca",
+    html.H1("Dashboard Proyecto 1 ACTD",
             style={"textAlign": "center", "marginBottom": "30px"}),
 
     html.Div([
@@ -927,21 +812,17 @@ app.layout = html.Div([
 ##################################################################################################################
 ##################################################################################################################
 ##################################################################################################################
-#################################Layout con opciones para cambiar##################################
+#################################Layout con opciones para cambiar ################################################
 ##################################################################################################################
 ##################################################################################################################
 ##################################################################################################################
-
-
-
 
 # arreglar dfs para poder hacer graficos de escoger
 
 categorias = ["punt_ingles","punt_matematicas","punt_sociales_ciudadanas","punt_c_naturales",
               "punt_lectura_critica","punt_global","Puntaje educacion padres","Puntaje recursos hogar"]
 
-indices_dict = {
-    "Homicidios": munihomicidios_agg.rename(columns={"indice_homicidios": "valor_indice"}),
+indices_dict = {"Homicidios": munihomicidios_agg.rename(columns={"indice_homicidios": "valor_indice"}),
     "Lesiones personales": munilesionesp_agg.rename(columns={"indice_lesiones_personales": "valor_indice"}),
     "Violencia intrafamiliar": muniviolencia_int_agg.rename(columns={"indice_violencia_intrafamiliar": "valor_indice"}),
     "Delitos sexuales": munidelitos_sex_agg.rename(columns={"indice_delitos_sexuales": "valor_indice"}),
@@ -957,7 +838,6 @@ for nombre, dfi in indices_dict.items():
     indices_long.append(tmp)
 
 indices_long = pd.concat(indices_long, ignore_index=True)
-
 indices_long["mpio_id"] = indices_long["cole_mcpio_ubicacion"]
 indices_long["año"] = indices_long["año"].astype(int)
 indices_long["valor_indice"] = pd.to_numeric(indices_long["valor_indice"], errors="coerce")
@@ -1014,39 +894,31 @@ app.layout = html.Div([
 
 """
 
-# función que construye la tabla pivot para el heatmap 
+# función que construye la tabla pivot para el heatmap en la pestaña 2
 
 def construir_heatmap(var_x_nombre, puntaje_col):
     cfg = VARIABLES_X[var_x_nombre]
     col_x = cfg["col"]
     orden_x = cfg["orden"]
     labels_x = cfg["labels"]
-
     tmp = df_trampa[["fami_estratovivienda", col_x, puntaje_col]].dropna(subset=[puntaje_col]).copy()
-
     # filtrar solo los valores con orden definido
     tmp = tmp[tmp[col_x].isin(orden_x)]
     tmp = tmp[tmp["fami_estratovivienda"].isin(ORDEN_ESTRATO)]
-
     tabla = pd.pivot_table(
         tmp,
         index="fami_estratovivienda",
         columns=col_x,
         values=puntaje_col,
-        aggfunc="mean"
-    )
-
-
+        aggfunc="mean")
     filas_presentes = [e for e in ORDEN_ESTRATO if e in tabla.index]
     cols_presentes = [c for c in orden_x if c in tabla.columns]
     tabla = tabla.reindex(index=filas_presentes, columns=cols_presentes)
-
     if labels_x:
         tabla.columns = [labels_x.get(c, c) for c in tabla.columns]
-
     return tabla
 
-
+#SEGUNDA PESTAÑA Jerónimo
 TAB2_LAYOUT = html.Div([
 
     html.H3("¿Qué pesa más en el Saber 11: características del colegio o socioeconómicas?",
@@ -1173,20 +1045,31 @@ TAB2_LAYOUT = html.Div([
 ])
 
 
+####################################################################################################
 
-
-
+#Pestaña 1 JuanCamilo
 
 app.layout = html.Div([
 
-    html.H1("Dashboard Educación y Violencia — Valle del Cauca",
-            style={"textAlign": "center", "marginBottom": "10px"}),
+    html.H1("Dashboard Proyecto 1 ACTD: Valle Del Cauca",
+            style={"textAlign": "center", "marginBottom": "7px"}),
+    
+    html.Div([
+        html.P("Autores: JuanCamilo Gómez y Jerónimo Rueda",
+               style={
+                   "textAlign": "center", 
+                   "color": "#003366",        
+                   "fontSize": "18px", 
+                   "marginBottom": "20px",
+                   "fontStyle": "italic"  
+               })
+    ]),
 
     dcc.Tabs(id="tabs-main", value="tab-violencia", children=[
 
         dcc.Tab(label="Violencia y Resultados", value="tab-violencia", children=[
             html.Div([
-
+                # Fila de selectores
                 html.Div([
                     html.Div([
                         html.Label("Seleccione índice de violencia"),
@@ -1221,200 +1104,156 @@ app.layout = html.Div([
 
                 html.Br(),
 
+                # Fila de Mapas
                 html.Div([
                     html.Div([dcc.Graph(id="graph-violencia")], className="six columns"),
                     html.Div([dcc.Graph(id="graph-puntaje")],   className="six columns"),
                 ], className="row"),
 
                 html.Br(),
-                dcc.Graph(id="graph-corr", style={"height": "70vh"}),
-                html.Div(id="texto-correlacion",
-                         style={"textAlign": "center", "fontSize": "22px",
-                                "fontWeight": "bold", "marginTop": "10px"})
-            ], style={"padding": "20px"})
-        ]),
+                
+                html.H4("Relación detallada por Componentes Saber 11", style={"textAlign": "center"}),
+                html.Div(id="texto-correlacion", style={"textAlign": "center", "fontWeight": "bold", "marginBottom": "10px"}), 
+                dcc.Graph(id="graph-multi-scatter", style={"height": "100vh"})
+                
+            ], style={"padding": "20px"}) # Aquí termina el Div con padding
+        ]), # Aquí termina el Tab de Violencia
 
         dcc.Tab(label="Trampa de Estrato", value="tab-trampa", children=[
             TAB2_LAYOUT
         ]),
     ])
 ])
-"""
-
-@app.callback(
-    Output('indicator-graphic', 'figure'),
-    [Input('xaxis-column', 'value'),
-     Input('yaxis-column', 'value'),
-     Input('xaxis-type', 'value'),
-     Input('yaxis-type', 'value'),
-     Input('year--slider', 'value')])
-def update_graph(xaxis_column_name, yaxis_column_name,
-                 xaxis_type, yaxis_type,
-                 year_value):
-    dff = df[df['Year'] == year_value]
-
-    fig = px.scatter(x=dff[dff['Indicator Name'] == xaxis_column_name]['Value'],
-                     y=dff[dff['Indicator Name'] == yaxis_column_name]['Value'],
-                     hover_name=dff[dff['Indicator Name'] == yaxis_column_name]['Country Name'])
-
-    fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 0}, hovermode='closest')
-
-    fig.update_xaxes(title=xaxis_column_name, 
-                     type='linear' if xaxis_type == 'Linear' else 'log') 
-
-    fig.update_yaxes(title=yaxis_column_name, 
-                     type='linear' if yaxis_type == 'Linear' else 'log') 
-
-    return fig
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
-"""
 
 @app.callback(
     Output("graph-violencia", "figure"),
     Output("graph-puntaje", "figure"),
-    Output("graph-corr", "figure"),
+    Output("graph-multi-scatter", "figure"),
     Output("texto-correlacion", "children"),
     Input("dd-indice", "value"),
     Input("dd-puntaje", "value")
 )
+def mapas_y_multi_dispersion(tipo_indice, tipo_puntaje):
 
-def mapas_diferentes(tipo_indice, tipo_puntaje):
-
-    #se pone fijo pq no hay suficientes datos para que en 2021 o 2020 se
-    #pueda armar el mapa completo
     aniooo = 2022 
 
-    
+    # --- Estructura if/elif original ---
     if tipo_indice == "indice_violencia":
-
         df_base = munivio_agg
-        titulo= "Mapa de Calor Valle del Cauca: Índice Violencia General 2022 "
-
+        titulo_mapa = "Índice Violencia General"
     elif tipo_indice == "indice_homicidios":
-
         df_base = munihomicidios_agg
-        titulo= "Mapa de Calor Valle del Cauca: Índice Homicidios 2022 "
-
-
+        titulo_mapa = "Índice Homicidios"
     elif tipo_indice == "indice_lesiones_personales":
-
         df_base = munilesionesp_agg
-        titulo= "Mapa de Calor Valle del Cauca: Índice Lesiones Personales 2022 "
-
+        titulo_mapa = "Índice Lesiones Personales"
     elif tipo_indice == "indice_violencia_intrafamiliar":
-
         df_base = muniviolencia_int_agg
-        titulo= "Mapa de Calor Valle del Cauca: Índice Violencia Intrafamiliar 2022 "
-
+        titulo_mapa = "Índice Violencia Intrafamiliar"
     elif tipo_indice == "indice_delitos_sexuales":
-
         df_base = munidelitos_sex_agg
-        titulo= "Mapa de Calor Valle del Cauca: Índice Delitos Sexuales 2022 "
-
+        titulo_mapa = "Índice Delitos Sexuales"
     elif tipo_indice == "indice_extorsion":
-
         df_base = muniext_agg
-        titulo= "Mapa de Calor Valle del Cauca: Índice Extorsión 2022 "
-
+        titulo_mapa = "Índice Extorsión"
     elif tipo_indice == "indice_amenazas":
-
         df_base = muni_amenazas_agg
-        titulo= "Mapa de Calor Valle del Cauca: Índice Amenazas 2022 "
-
+        titulo_mapa = "Índice Amenazas"
     else:
-
         df_base = muni_hurtos_agg
-        titulo= "Mapa de Calor Valle del Cauca: Índice Hurtos 2022 "
+        titulo_mapa = "Índice Hurtos"
 
     dff = df_base[df_base["año"] == aniooo].copy()
     dff["mpio_id"] = dff["cole_mcpio_ubicacion"]
 
+    #MAPAS
 
-    #Mapa Violencia
+    #MAPA VIOLENCIA
     fig_vio = px.choropleth_mapbox(
-        dff,
-        geojson=geojson_valle,
-        locations="mpio_id",
-        featureidkey="id",
-        color=tipo_indice,
-        hover_name="mpio_id",
-        mapbox_style="open-street-map",
-        center={"lat": 4.2, "lon": -76.3},
-        zoom=7,
-        opacity=0.7,
-        title=titulo)
-
-
+        dff, geojson=geojson_valle, locations="mpio_id", featureidkey="id",
+        color=tipo_indice, hover_name="mpio_id", mapbox_style="open-street-map",
+        center={"lat": 4.2, "lon": -76.3}, zoom=7, opacity=0.7, 
+        title=f"Mapa de Calor: {titulo_mapa} 2022")
     fig_vio.update_layout(margin={"r":0,"t":50,"l":0,"b":0})
+
+
     fig_vio.update_traces(marker_line_width=1, marker_line_color="black")
 
-
-    #Mapa Puntajes
+    #MAPA ICFES
     fig_punt = px.choropleth_mapbox(
-        dff,
-        geojson=geojson_valle,
-        locations="mpio_id",
-        featureidkey="id",
-        color=tipo_puntaje,
-        hover_name="mpio_id",
-        mapbox_style="open-street-map",
-        center={"lat": 4.2, "lon": -76.3},
-        zoom=7,
-        opacity=0.7,
-        color_continuous_scale="cividis",
+        dff, geojson=geojson_valle, locations="mpio_id", featureidkey="id",
+        color=tipo_puntaje, hover_name="mpio_id", mapbox_style="open-street-map",
+        center={"lat": 4.2, "lon": -76.3}, zoom=7, opacity=0.7, color_continuous_scale="cividis",
         title=f"{tipo_puntaje.replace('_',' ').replace('punt','').title()} ({aniooo})")
+        
 
     fig_punt.update_layout(margin={"r":0,"t":50,"l":0,"b":0})
+
     fig_punt.update_traces(marker_line_width=1, marker_line_color="black")
 
-
-
-
-    df_dispersion = df_base.copy()
-    df_dispersion["mpio"] = df_dispersion["cole_mcpio_ubicacion"]
-    df_dispersion["año"] =  pd.to_numeric(df_dispersion["año"], errors="coerce")
-
-    columnas=["mpio","año","Zona"]
-
-    dispersion_df_agrup = (df_dispersion
-        .groupby("mpio", as_index=False)
-        .agg(
-            Zona=("Zona", "first"),
-            x_puntaje=(tipo_puntaje, "mean"),
-            y_indice=(tipo_indice, "mean"),
-        ))
-
-    fig_corr = px.scatter(
-        dispersion_df_agrup,
-        x="x_puntaje",
-        y="y_indice",
-        color="Zona",
-        hover_name="mpio",   
-        hover_data={"Zona": True,"x_puntaje": ":.2f","y_indice": ":.2f","mpio": False},                
-        opacity=0.75,
-        title=f"Correlación entre {tipo_puntaje.replace('_',' ').replace('punt','').title()} y {tipo_indice.replace('_',' ').replace('indice','Índice').title()}",
-        labels=({"x_puntaje": tipo_puntaje.replace("_"," ").replace("punt","").title(),
-                "y_indice":  tipo_indice.replace("_"," ").replace("indice","Índice").title()}))
-
+    #Puntajes y Violencia Dispersiones
+    categorias_icfes = ["punt_matematicas", "punt_lectura_critica", "punt_ingles", 
+                 "punt_sociales_ciudadanas", "punt_c_naturales", "punt_global"]
     
+    titulos_con_r = []
+    for categoria in categorias_icfes:
+        r_val = dff[categoria].corr(dff[tipo_indice])
+        nombre_limpio = categoria.replace("punt_", "").replace("_", " ").title()
+        titulos_con_r.append(f"{nombre_limpio}<br><sup>correlación = {r_val:.3f}</sup>")
 
+    fig_6_plots = make_subplots(
+        rows=2, cols=3, 
+        subplot_titles=titulos_con_r,
+        horizontal_spacing=0.07,
+        vertical_spacing=0.2)
+
+    for i, categoria in enumerate(categorias_icfes):
+        fila = (i // 3) + 1
+        columnaaa = (i % 3) + 1
+        
+        # Puntos por Zona
+        for zona in dff["Zona"].unique():
+            df_z = dff[dff["Zona"] == zona]
+            fig_6_plots.add_trace(
+                go.Scatter(
+                    x=df_z[tipo_indice], 
+                    y=df_z[categoria],
+                    mode='markers',
+                    name=zona,
+                    marker=dict(size=7, opacity=0.6),
+                    text=df_z["mpio_id"],
+                    hovertemplate="<b>%{text}</b><br>Índice: %{x:.2f}<br>Puntaje: %{y:.1f}",
+                    showlegend=(i == 0)
+                ), row=fila, col=columnaaa)
+        
+        # Línea tendencia
+        df_reg = dff[[tipo_indice, categoria]].dropna()
+
+        if not df_reg.empty:
+            tmp_fig = px.scatter(df_reg, x=tipo_indice, y=categoria, trendline="ols")
+            trendline = tmp_fig.data[1]
+            fig_6_plots.add_trace(
+                go.Scatter(x=trendline.x, y=trendline.y, 
+                        mode='lines', line=dict(color='black', dash='dash', width=1.5),
+                        showlegend=False, hoverinfo='skip'),row=fila, col=columnaaa)
+
+    fig_6_plots.update_layout(height=850, template="plotly_white",title_text=f"Relación entre {titulo_mapa} y Componentes Saber 11",margin=dict(t=120, b=50, l=50, r=50))
+    fig_6_plots.update_layout(margin={"r":40,"t":120,"l":80,"b":80})
+
+    fig_6_plots.update_traces(marker_line_width=1, marker_line_color="black")
+
+    correlacion_seleccionada = dff[tipo_puntaje].corr(dff[tipo_indice])
     
-    fig_corr.update_layout(height=650, margin={"r":30,"t":90,"l":60,"b":60})
-    numero = dispersion_df_agrup["x_puntaje"].corr(dispersion_df_agrup["y_indice"])
-    texto_corr = f"Correlación = {numero:.3f}"
+    nombre_puntaje = tipo_puntaje.replace('punt_','').replace('_',' ').title()
+    texto_corr = f"Correlación global entre {titulo_mapa} y {nombre_puntaje} = {correlacion_seleccionada:.3f}"
 
-    return fig_vio, fig_punt, fig_corr, texto_corr
-
+    return fig_vio, fig_punt, fig_6_plots, texto_corr
 
 @app.callback(
      Output("graph-heatmap-trampa", "figure"),
      Output("texto-insight-trampa", "children"),
      Input("dd-var-x", "value"),
-     Input("dd-puntaje-trampa", "value")
- )
+     Input("dd-puntaje-trampa", "value"))
 def actualizar_heatmap_trampa(var_x_nombre, puntaje_col):
      tabla = construir_heatmap(var_x_nombre, puntaje_col)
 
@@ -1426,41 +1265,36 @@ def actualizar_heatmap_trampa(var_x_nombre, puntaje_col):
          aspect="auto",
          text_auto=".1f",
          labels={"x": var_x_nombre, "y": "Estrato", "color": puntaje_label},
-         title=f"{puntaje_label} promedio por Estrato × {var_x_nombre}"
-     )
+         title=f"{puntaje_label} promedio por Estrato × {var_x_nombre}")
      fig.update_layout(
          margin={"t": 80, "b": 60, "l": 120, "r": 40},
          coloraxis_colorbar=dict(title=puntaje_label),
          xaxis_title=var_x_nombre,
          yaxis_title="Estrato socioeconómico",
-         font=dict(size=13)
-     )
+         font=dict(size=13))
      fig.update_xaxes(tickangle=-20)
-
      try:
          diff_var = tabla.max(axis=1).mean() - tabla.min(axis=1).mean()
          fila_e1 = tabla.loc["Estrato 1"].mean() if "Estrato 1" in tabla.index else None
          fila_e6 = tabla.loc["Estrato 6"].mean() if "Estrato 6" in tabla.index else None
          diff_estrato = (fila_e6 - fila_e1) if (fila_e1 and fila_e6) else None
-
          if diff_estrato is not None:
              insight = (
                  f"Diferencia media por {var_x_nombre}: {diff_var:.1f} pts   |   "
-                 f"Diferencia Estrato 1 vs Estrato 6: {diff_estrato:.1f} pts"
-             )
+                 f"Diferencia Estrato 1 vs Estrato 6: {diff_estrato:.1f} pts")
          else:
              insight = f"Diferencia media por {var_x_nombre}: {diff_var:.1f} pts"
      except Exception:
          insight = ""
-
      return fig, insight
 
 
 @app.callback(
     Output("graph-dist-estrato", "figure"),
     Input("dd-puntaje-dist", "value"),
-    Input("radio-tipo-plot", "value")
-)
+    Input("radio-tipo-plot", "value"))
+
+
 def actualizar_dist_estrato(puntaje_col, tipo_plot):
     tmp = df_trampa[["fami_estratovivienda", puntaje_col]].dropna().copy()
     tmp = tmp[tmp["fami_estratovivienda"].isin(ORDEN_ESTRATO)]
@@ -1468,12 +1302,12 @@ def actualizar_dist_estrato(puntaje_col, tipo_plot):
     tmp["fami_estratovivienda"] = pd.Categorical(
         tmp["fami_estratovivienda"],
         categories=ORDEN_ESTRATO,
-        ordered=True
-    )
-    tmp = tmp.sort_values("fami_estratovivienda")
+        ordered=True)
 
+    tmp = tmp.sort_values("fami_estratovivienda")
     puntaje_label = PUNTAJES_LABELS.get(puntaje_col, puntaje_col)
 
+    #Violenes
     if tipo_plot == "violin":
         fig = px.violin(
             tmp,
@@ -1491,6 +1325,7 @@ def actualizar_dist_estrato(puntaje_col, tipo_plot):
             color_discrete_sequence=px.colors.sequential.Viridis
         )
     else:
+        #Boxplots
         fig = px.box(
             tmp,
             x="fami_estratovivienda",
@@ -1511,19 +1346,17 @@ def actualizar_dist_estrato(puntaje_col, tipo_plot):
         margin={"t": 70, "b": 60, "l": 60, "r": 30},
         xaxis_title="Estrato socioeconómico",
         yaxis_title=puntaje_label,
-        font=dict(size=13)
-    )
+        font=dict(size=13))
 
     return fig    
-
-
-
 @app.callback(
     Output("graph-scatter-edu", "figure"),
     Input("radio-edu-scatter", "value"),
     Input("dd-puntaje-scatter", "value"),
-    Input("check-estratos", "value")
-)
+    Input("check-estratos", "value"))
+
+#DIspersión Pestaña 2 estratos
+
 def actualizar_scatter_edu(col_edu, puntaje_col, estratos_seleccionados):
     cols_needed = ["fami_estratovivienda", "cole_mcpio_ubicacion", col_edu, puntaje_col]
 
@@ -1553,8 +1386,7 @@ def actualizar_scatter_edu(col_edu, puntaje_col, estratos_seleccionados):
             "edu_promedio": ":.2f",
             "puntaje_promedio": ":.1f",
             "n": True,
-            "fami_estratovivienda": True
-        },
+            "fami_estratovivienda": True},
         category_orders={"fami_estratovivienda": ORDEN_ESTRATO},
         color_discrete_map={
             "Estrato 1": "#d62728",
@@ -1563,8 +1395,7 @@ def actualizar_scatter_edu(col_edu, puntaje_col, estratos_seleccionados):
             "Estrato 4": "#2ca02c",
             "Estrato 5": "#1f77b4",
             "Estrato 6": "#9467bd",
-            "Sin Estrato": "#8c564b",
-        },
+            "Sin Estrato": "#8c564b",},
 
         labels={
             "edu_promedio": f"Nivel educativo ({edu_label})",
@@ -1574,15 +1405,12 @@ def actualizar_scatter_edu(col_edu, puntaje_col, estratos_seleccionados):
         },
         title=f"{puntaje_label} vs Educación ({edu_label}) por municipio y estrato",
         trendline="ols",
-        trendline_scope="overall"
-    )
+        trendline_scope="overall")
 
     fig.update_layout(
         margin={"t": 70, "b": 60, "l": 70, "r": 30},
         legend_title="Estrato",
-        font=dict(size=13)
-    )
-
+        font=dict(size=13))
     return fig
 
 
