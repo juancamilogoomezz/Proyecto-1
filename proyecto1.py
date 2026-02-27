@@ -1234,7 +1234,7 @@ app.layout = html.Div([
             ], style={"padding": "20px"})
         ]),
 
-        dcc.Tab(label="Trampa del Estrato", value="tab-trampa", children=[
+        dcc.Tab(label="Trampa de Estrato", value="tab-trampa", children=[
             TAB2_LAYOUT
         ]),
     ])
