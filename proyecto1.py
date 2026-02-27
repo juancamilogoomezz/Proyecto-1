@@ -35,6 +35,7 @@ mapa_valle = gpd.read_file('valle.json')
 ##################################################################################################################
 ##################################################################################################################
 ##################################################################################################################
+df.columns = df.columns.str.lower()
 
 mapaarreglo = {
     "Sin Estrato": 0,
@@ -55,7 +56,7 @@ df[df["punt_lectura_critica"].isna()]["periodo"].value_counts()
 
 df=df[df["punt_global"].notna()]
 df=df.drop_duplicates()
-
+df.columns = df.columns.str.lower()
 
 df["estu_fechanacimiento"] = pd.to_datetime(
     df["estu_fechanacimiento"],
@@ -774,8 +775,117 @@ fig_punt = px.choropleth_mapbox(
 fig_punt.update_layout(margin={"r":0,"t":50,"l":0,"b":0})
 fig_punt.update_traces(marker_line_width=1, marker_line_color="black")
 
+##################################################################################################################
+##################################################################################################################
+############################################ Preparación df_trampa ###############################################
+##################################################################################################################
+##################################################################################################################
+##################################################################################################################
 
+ORDEN_ESTRATO = [
+    "Estrato 1", "Estrato 2", "Estrato 3", "Estrato 4",
+    "Estrato 5", "Estrato 6", "Sin Estrato", "Sin información"
+]
 
+ORDEN_EDU = [
+    "Ninguno", "Primaria incompleta", "Primaria completa",
+    "Secundaria (Bachillerato) incompleta", "Secundaria (Bachillerato) completa",
+    "Técnica o tecnológica incompleta", "Técnica o tecnológica completa",
+    "Educación profesional incompleta", "Educación profesional completa",
+    "Postgrado", "No sabe", "No Aplica", "Sin información"
+]
+
+COLS_TRAMPA = [
+    "fami_estratovivienda", "cole_naturaleza", "fami_educacionmadre",
+    "fami_educacionpadre", "cole_bilingue", "cole_jornada",
+    "cole_area_ubicacion", "fami_tieneinternet", "fami_tienecomputador",
+    "fami_tienelavadora", "punt_ingles", "punt_matematicas",
+    "punt_sociales_ciudadanas", "punt_c_naturales", "punt_lectura_critica",
+    "punt_global"
+]
+
+df_trampa = df[COLS_TRAMPA].copy()
+
+df_trampa["fami_estratovivienda"] = (
+    df_trampa["fami_estratovivienda"]
+    .astype("string").str.strip().fillna("Sin información")
+)
+
+for col in ["cole_bilingue", "cole_jornada", "cole_naturaleza",
+            "cole_area_ubicacion", "fami_tieneinternet",
+            "fami_tienecomputador", "fami_tienelavadora"]:
+    df_trampa[col] = (
+        df_trampa[col].astype("string").str.strip().str.upper().fillna("SIN INFO")
+    )
+
+for col in ["fami_educacionmadre", "fami_educacionpadre"]:
+    df_trampa[col] = (
+        df_trampa[col].astype("string").str.strip().fillna("Sin información")
+    )
+
+PUNTAJES_COLS = [
+    "punt_ingles", "punt_matematicas", "punt_sociales_ciudadanas",
+    "punt_c_naturales", "punt_lectura_critica", "punt_global"
+]
+for col in PUNTAJES_COLS:
+    df_trampa[col] = pd.to_numeric(df_trampa[col], errors="coerce")
+
+VARIABLES_X = {
+    "Bilingüismo": {
+        "col": "cole_bilingue",
+        "orden": ["N", "S"],
+        "labels": {"N": "No bilingüe", "S": "Bilingüe"}
+    },
+    "Jornada": {
+        "col": "cole_jornada",
+        "orden": ["MAÑANA", "TARDE", "COMPLETA", "UNICA", "NOCHE", "SABATINA"],
+        "labels": {}
+    },
+    "Naturaleza del colegio": {
+        "col": "cole_naturaleza",
+        "orden": ["OFICIAL", "NO OFICIAL"],
+        "labels": {"OFICIAL": "Oficial", "NO OFICIAL": "No oficial (Privado)"}
+    },
+    "Área (Urbano/Rural)": {
+        "col": "cole_area_ubicacion",
+        "orden": ["URBANO", "RURAL"],
+        "labels": {"URBANO": "Urbano", "RURAL": "Rural"}
+    },
+    "Internet en el hogar": {
+        "col": "fami_tieneinternet",
+        "orden": ["SI", "NO"],
+        "labels": {"SI": "Tiene internet", "NO": "No tiene internet"}
+    },
+    "Computador en el hogar": {
+        "col": "fami_tienecomputador",
+        "orden": ["SI", "NO"],
+        "labels": {"SI": "Tiene computador", "NO": "No tiene computador"}
+    },
+    "Lavadora en el hogar": {
+        "col": "fami_tienelavadora",
+        "orden": ["SI", "NO"],
+        "labels": {"SI": "Tiene lavadora", "NO": "No tiene lavadora"}
+    },
+    "Educación de la madre": {
+        "col": "fami_educacionmadre",
+        "orden": ORDEN_EDU,
+        "labels": {}
+    },
+    "Educación del padre": {
+        "col": "fami_educacionpadre",
+        "orden": ORDEN_EDU,
+        "labels": {}
+    },
+}
+
+PUNTAJES_LABELS = {
+    "punt_global": "Puntaje Global",
+    "punt_matematicas": "Matemáticas",
+    "punt_ingles": "Inglés",
+    "punt_lectura_critica": "Lectura Crítica",
+    "punt_c_naturales": "Ciencias Naturales",
+    "punt_sociales_ciudadanas": "Sociales y Ciudadanas",
+}
 
 
 
@@ -898,62 +1008,180 @@ app.layout = html.Div([
 
 """
 
+# función que construye la tabla pivot para el heatmap 
+
+def construir_heatmap(var_x_nombre, puntaje_col):
+    cfg = VARIABLES_X[var_x_nombre]
+    col_x = cfg["col"]
+    orden_x = cfg["orden"]
+    labels_x = cfg["labels"]
+
+    tmp = df_trampa[["fami_estratovivienda", col_x, puntaje_col]].dropna(subset=[puntaje_col]).copy()
+
+    # Filtrar solo los valores que tienen orden definido
+    tmp = tmp[tmp[col_x].isin(orden_x)]
+    tmp = tmp[tmp["fami_estratovivienda"].isin(ORDEN_ESTRATO)]
+
+    tabla = pd.pivot_table(
+        tmp,
+        index="fami_estratovivienda",
+        columns=col_x,
+        values=puntaje_col,
+        aggfunc="mean"
+    )
+
+    # Reindexar según órdenes definidos
+    filas_presentes = [e for e in ORDEN_ESTRATO if e in tabla.index]
+    cols_presentes = [c for c in orden_x if c in tabla.columns]
+    tabla = tabla.reindex(index=filas_presentes, columns=cols_presentes)
+
+    # Aplicar etiquetas de display en columnas
+    if labels_x:
+        tabla.columns = [labels_x.get(c, c) for c in tabla.columns]
+
+    return tabla
+
+
+TAB2_LAYOUT = html.Div([
+
+    html.H3("¿Qué pesa más en el Saber 11: características del colegio o socioeconómicas?",
+            style={"textAlign": "center", "marginTop": "20px"}),
+    
+
+    html.Div([
+        html.Div([
+            html.Label("Variable a comparar con el estrato"),
+            dcc.Dropdown(
+                id="dd-var-x",
+                options=[{"label": k, "value": k} for k in VARIABLES_X],
+                value="Bilingüismo",
+                clearable=False
+            )
+        ], className="six columns"),
+
+        html.Div([
+            html.Label("Puntaje a analizar"),
+            dcc.Dropdown(
+                id="dd-puntaje-trampa",
+                options=[{"label": v, "value": k} for k, v in PUNTAJES_LABELS.items()],
+                value="punt_global",
+                clearable=False
+            )
+        ], className="six columns"),
+    ], className="row", style={"marginBottom": "20px"}),
+
+    dcc.Graph(id="graph-heatmap-trampa", style={"height": "65vh"}),
+
+    html.Div(id="texto-insight-trampa",
+             style={"textAlign": "center", "fontSize": "15px",
+                    "color": "#333", "marginTop": "10px", "marginBottom": "20px"}),
+    
+    html.Hr(style={"margin": "30px 0"}),
+
+    html.H4("Distribución de puntajes por estrato",
+            style={"textAlign": "center"}),
+    html.P(
+        "¿Cómo se distribuyen los puntajes dentro de cada estrato? ",
+        style={"textAlign": "center", "color": "#555", "fontSize": "14px",
+               "maxWidth": "800px", "margin": "0 auto 20px auto"}
+    ),
+
+    html.Div([
+        html.Div([
+            html.Label("Puntaje a visualizar"),
+            dcc.Dropdown(
+                id="dd-puntaje-dist",
+                options=[{"label": v, "value": k} for k, v in PUNTAJES_LABELS.items()],
+                value="punt_global",
+                clearable=False
+            )
+        ], className="six columns"),
+
+        html.Div([
+            html.Label("Tipo de gráfico"),
+            dcc.RadioItems(
+                id="radio-tipo-plot",
+                options=[
+                    {"label": "  Violín",  "value": "violin"},
+                    {"label": "  Boxplot", "value": "box"},
+                ],
+                value="violin",
+                labelStyle={"display": "inline-block", "marginRight": "20px"},
+                style={"marginTop": "6px"}
+            )
+        ], className="six columns"),
+    ], className="row", style={"marginBottom": "10px"}),
+
+    dcc.Graph(id="graph-dist-estrato", style={"height": "60vh"}),
+])
+
+
+
+
+
+
 app.layout = html.Div([
 
-    html.H1("Dashboard Educación y Violencia - Valle del Cauca",
-            style={"textAlign": "center"}),
+    html.H1("Dashboard Educación y Violencia — Valle del Cauca",
+            style={"textAlign": "center", "marginBottom": "10px"}),
 
-    html.Div([
+    dcc.Tabs(id="tabs-main", value="tab-violencia", children=[
 
-        html.Div([
-            html.Label("Seleccione índice de violencia"),
-            dcc.Dropdown(
-                id="dd-indice",
-                options=[
-                    {"label": "Índice Violencia General", "value": "indice_violencia"},
-                    {"label": "Índice Homicidios", "value": "indice_homicidios"},
-                    {"label": "Índice Lesiones Personales", "value": "indice_lesiones_personales"},
-                    {"label": "Índice Violencia Intrafamiliar", "value": "indice_violencia_intrafamiliar"},
-                    {"label": "Índice Delitos Sexuales", "value": "indice_delitos_sexuales"},
-                    {"label": "Índice Extorsión", "value": "indice_extorsion"},
-                    {"label": "Índice Amenazas", "value": "indice_amenazas"},
-                    {"label": "Índice Hurtos", "value": "indice_hurtos"},],
-                value="indice_violencia",
-                clearable=False)], 
-            className="six columns"),
+        dcc.Tab(label="Violencia y Resultados", value="tab-violencia", children=[
+            html.Div([
 
-        html.Div([
-            html.Label("Escoja una de las Categorías actuales de la Prueba Saber 11"),
-            dcc.Dropdown(
-                id="dd-puntaje",
-                options=[{"label": c.replace("_"," ").title().replace("punt","").upper(), "value": c} for c in categorias],
-                value="punt_global",
-                clearable=False)], 
-            className="six columns"),], 
-        className="row"),
+                html.Div([
+                    html.Div([
+                        html.Label("Seleccione índice de violencia"),
+                        dcc.Dropdown(
+                            id="dd-indice",
+                            options=[
+                                {"label": "Índice Violencia General",      "value": "indice_violencia"},
+                                {"label": "Índice Homicidios",             "value": "indice_homicidios"},
+                                {"label": "Índice Lesiones Personales",    "value": "indice_lesiones_personales"},
+                                {"label": "Índice Violencia Intrafamiliar","value": "indice_violencia_intrafamiliar"},
+                                {"label": "Índice Delitos Sexuales",       "value": "indice_delitos_sexuales"},
+                                {"label": "Índice Extorsión",              "value": "indice_extorsion"},
+                                {"label": "Índice Amenazas",               "value": "indice_amenazas"},
+                                {"label": "Índice Hurtos",                 "value": "indice_hurtos"},
+                            ],
+                            value="indice_violencia",
+                            clearable=False
+                        )
+                    ], className="six columns"),
 
-     
-    html.Br(),
+                    html.Div([
+                        html.Label("Categoría del Saber 11"),
+                        dcc.Dropdown(
+                            id="dd-puntaje",
+                            options=[{"label": c.replace("_"," ").title().replace("Punt ",""), "value": c}
+                                     for c in categorias],
+                            value="punt_global",
+                            clearable=False
+                        )
+                    ], className="six columns"),
+                ], className="row"),
 
-    html.Div([
-        html.Div([dcc.Graph(id="graph-violencia")], className="six columns"),
-        html.Div([dcc.Graph(id="graph-puntaje")], className="six columns"),], 
-        className="row"),
-        html.Br(),
+                html.Br(),
 
-    dcc.Graph(id="graph-corr", style={"height": "70vh"}),
+                html.Div([
+                    html.Div([dcc.Graph(id="graph-violencia")], className="six columns"),
+                    html.Div([dcc.Graph(id="graph-puntaje")],   className="six columns"),
+                ], className="row"),
 
-    html.Div(
-        id="texto-correlacion",
-        style={
-            "textAlign": "center",
-            "fontSize": "22px",
-            "fontWeight": "bold",
-            "marginTop": "10px",})])
+                html.Br(),
+                dcc.Graph(id="graph-corr", style={"height": "70vh"}),
+                html.Div(id="texto-correlacion",
+                         style={"textAlign": "center", "fontSize": "22px",
+                                "fontWeight": "bold", "marginTop": "10px"})
+            ], style={"padding": "20px"})
+        ]),
 
-
-
-
+        dcc.Tab(label="Trampa del Estrato", value="tab-trampa", children=[
+            TAB2_LAYOUT
+        ]),
+    ])
+])
 """
 
 @app.callback(
@@ -1124,8 +1352,115 @@ def mapas_diferentes(tipo_indice, tipo_puntaje):
     return fig_vio, fig_punt, fig_corr, texto_corr
 
 
+@app.callback(
+     Output("graph-heatmap-trampa", "figure"),
+     Output("texto-insight-trampa", "children"),
+     Input("dd-var-x", "value"),
+     Input("dd-puntaje-trampa", "value")
+ )
+def actualizar_heatmap_trampa(var_x_nombre, puntaje_col):
+     tabla = construir_heatmap(var_x_nombre, puntaje_col)
 
-    
+     puntaje_label = PUNTAJES_LABELS.get(puntaje_col, puntaje_col)
+
+     fig = px.imshow(
+         tabla,
+         color_continuous_scale="YlOrRd",
+         aspect="auto",
+         text_auto=".1f",
+         labels={"x": var_x_nombre, "y": "Estrato", "color": puntaje_label},
+         title=f"{puntaje_label} promedio por Estrato × {var_x_nombre}"
+     )
+     fig.update_layout(
+         margin={"t": 80, "b": 60, "l": 120, "r": 40},
+         coloraxis_colorbar=dict(title=puntaje_label),
+         xaxis_title=var_x_nombre,
+         yaxis_title="Estrato socioeconómico",
+         font=dict(size=13)
+     )
+     fig.update_xaxes(tickangle=-20)
+
+     # Insight automático: diferencia entre valor min y max de la variable X
+     # comparado con la diferencia entre estrato 1 y 6
+     try:
+         diff_var = tabla.max(axis=1).mean() - tabla.min(axis=1).mean()
+         fila_e1 = tabla.loc["Estrato 1"].mean() if "Estrato 1" in tabla.index else None
+         fila_e6 = tabla.loc["Estrato 6"].mean() if "Estrato 6" in tabla.index else None
+         diff_estrato = (fila_e6 - fila_e1) if (fila_e1 and fila_e6) else None
+
+         if diff_estrato is not None:
+             insight = (
+                 f"Diferencia media por {var_x_nombre}: {diff_var:.1f} pts   |   "
+                 f"Diferencia Estrato 1 vs Estrato 6: {diff_estrato:.1f} pts"
+             )
+         else:
+             insight = f"Diferencia media por {var_x_nombre}: {diff_var:.1f} pts"
+     except Exception:
+         insight = ""
+
+     return fig, insight
+
+
+@app.callback(
+    Output("graph-dist-estrato", "figure"),
+    Input("dd-puntaje-dist", "value"),
+    Input("radio-tipo-plot", "value")
+)
+def actualizar_dist_estrato(puntaje_col, tipo_plot):
+    tmp = df_trampa[["fami_estratovivienda", puntaje_col]].dropna().copy()
+    tmp = tmp[tmp["fami_estratovivienda"].isin(ORDEN_ESTRATO)]
+
+    # Convertir estrato a categoría ordenada para que el eje quede bien
+    tmp["fami_estratovivienda"] = pd.Categorical(
+        tmp["fami_estratovivienda"],
+        categories=ORDEN_ESTRATO,
+        ordered=True
+    )
+    tmp = tmp.sort_values("fami_estratovivienda")
+
+    puntaje_label = PUNTAJES_LABELS.get(puntaje_col, puntaje_col)
+
+    if tipo_plot == "violin":
+        fig = px.violin(
+            tmp,
+            x="fami_estratovivienda",
+            y=puntaje_col,
+            color="fami_estratovivienda",
+            box=True,           # muestra el boxplot interno dentro del violín
+            points=False,       # sin puntos individuales (son demasiados)
+            category_orders={"fami_estratovivienda": ORDEN_ESTRATO},
+            labels={
+                "fami_estratovivienda": "Estrato",
+                puntaje_col: puntaje_label
+            },
+            title=f"Distribución de {puntaje_label} por Estrato",
+            color_discrete_sequence=px.colors.sequential.Viridis
+        )
+    else:
+        fig = px.box(
+            tmp,
+            x="fami_estratovivienda",
+            y=puntaje_col,
+            color="fami_estratovivienda",
+            points=False,
+            category_orders={"fami_estratovivienda": ORDEN_ESTRATO},
+            labels={
+                "fami_estratovivienda": "Estrato",
+                puntaje_col: puntaje_label
+            },
+            title=f"Distribución de {puntaje_label} por Estrato",
+            color_discrete_sequence=px.colors.sequential.Viridis
+        )
+
+    fig.update_layout(
+        showlegend=False,
+        margin={"t": 70, "b": 60, "l": 60, "r": 30},
+        xaxis_title="Estrato socioeconómico",
+        yaxis_title=puntaje_label,
+        font=dict(size=13)
+    )
+
+    return fig    
 
 
 
