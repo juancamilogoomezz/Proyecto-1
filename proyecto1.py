@@ -782,9 +782,11 @@ fig_punt.update_traces(marker_line_width=1, marker_line_color="black")
 ##################################################################################################################
 ##################################################################################################################
 
+
+
 ORDEN_ESTRATO = [
     "Estrato 1", "Estrato 2", "Estrato 3", "Estrato 4",
-    "Estrato 5", "Estrato 6", "Sin Estrato", "Sin información"
+    "Estrato 5", "Estrato 6", "Sin Estrato"
 ]
 
 ORDEN_EDU = [
@@ -792,7 +794,7 @@ ORDEN_EDU = [
     "Secundaria (Bachillerato) incompleta", "Secundaria (Bachillerato) completa",
     "Técnica o tecnológica incompleta", "Técnica o tecnológica completa",
     "Educación profesional incompleta", "Educación profesional completa",
-    "Postgrado", "No sabe", "No Aplica", "Sin información"
+    "Postgrado", "No sabe", "No Aplica"
 ]
 
 COLS_TRAMPA = [
@@ -887,6 +889,10 @@ PUNTAJES_LABELS = {
     "punt_sociales_ciudadanas": "Sociales y Ciudadanas",
 }
 
+COLS_EDU_NUM = ["Puntaje Educación Madre", "Puntaje Educación Padre", "Puntaje educacion padres"]
+for col in COLS_EDU_NUM:
+    if col not in df_trampa.columns:
+        df_trampa[col] = puntajes[col].values
 
 
 ##################################################################################################################
@@ -1018,7 +1024,7 @@ def construir_heatmap(var_x_nombre, puntaje_col):
 
     tmp = df_trampa[["fami_estratovivienda", col_x, puntaje_col]].dropna(subset=[puntaje_col]).copy()
 
-    # Filtrar solo los valores que tienen orden definido
+    # filtrar solo los valores con orden definido
     tmp = tmp[tmp[col_x].isin(orden_x)]
     tmp = tmp[tmp["fami_estratovivienda"].isin(ORDEN_ESTRATO)]
 
@@ -1030,12 +1036,11 @@ def construir_heatmap(var_x_nombre, puntaje_col):
         aggfunc="mean"
     )
 
-    # Reindexar según órdenes definidos
+
     filas_presentes = [e for e in ORDEN_ESTRATO if e in tabla.index]
     cols_presentes = [c for c in orden_x if c in tabla.columns]
     tabla = tabla.reindex(index=filas_presentes, columns=cols_presentes)
 
-    # Aplicar etiquetas de display en columnas
     if labels_x:
         tabla.columns = [labels_x.get(c, c) for c in tabla.columns]
 
@@ -1113,6 +1118,58 @@ TAB2_LAYOUT = html.Div([
     ], className="row", style={"marginBottom": "10px"}),
 
     dcc.Graph(id="graph-dist-estrato", style={"height": "60vh"}),
+
+    html.Hr(style={"margin": "30px 0"}),
+
+    html.H4("¿La educación de los padres puede compensar el estrato?",
+            style={"textAlign": "center"}),
+    html.P(
+        "Cada punto es un municipio. El eje X muestra el nivel educativo "
+        "promedio de los padres, el eje Y el puntaje. ",
+        style={"textAlign": "center", "color": "#555", "fontSize": "14px",
+               "maxWidth": "850px", "margin": "0 auto 20px auto"}
+    ),
+
+    html.Div([
+        html.Div([
+            html.Label("Educación a comparar"),
+            dcc.RadioItems(
+                id="radio-edu-scatter",
+                options=[
+                    {"label": "  Madre",  "value": "Puntaje Educación Madre"},
+                    {"label": "  Padre",  "value": "Puntaje Educación Padre"},
+                    {"label": "  Ambos", "value": "Puntaje educacion padres"},
+                ],
+                value="Puntaje educacion padres",
+                labelStyle={"display": "inline-block", "marginRight": "20px"},
+                style={"marginTop": "6px"}
+            )
+        ], className="six columns"),
+
+        html.Div([
+            html.Label("Puntaje a visualizar"),
+            dcc.Dropdown(
+                id="dd-puntaje-scatter",
+                options=[{"label": v, "value": k} for k, v in PUNTAJES_LABELS.items()],
+                value="punt_global",
+                clearable=False
+            )
+        ], className="six columns"),
+    ], className="row", style={"marginBottom": "10px"}),
+
+    html.Div([
+        html.Label("Mostrar estratos:"),
+        dcc.Checklist(
+            id="check-estratos",
+            options=[{"label": f"  {e}", "value": e} for e in ORDEN_ESTRATO],
+            value=["Estrato 1","Estrato 2","Estrato 3",
+                   "Estrato 4","Estrato 5","Estrato 6"],
+            inline=True,
+            labelStyle={"marginRight": "15px"}
+        )
+    ], style={"marginBottom": "15px"}),
+
+    dcc.Graph(id="graph-scatter-edu", style={"height": "60vh"}),
 ])
 
 
@@ -1177,7 +1234,7 @@ app.layout = html.Div([
             ], style={"padding": "20px"})
         ]),
 
-        dcc.Tab(label="Trampa del Estrato", value="tab-trampa", children=[
+        dcc.Tab(label="Trampa de Estrato", value="tab-trampa", children=[
             TAB2_LAYOUT
         ]),
     ])
@@ -1380,8 +1437,6 @@ def actualizar_heatmap_trampa(var_x_nombre, puntaje_col):
      )
      fig.update_xaxes(tickangle=-20)
 
-     # Insight automático: diferencia entre valor min y max de la variable X
-     # comparado con la diferencia entre estrato 1 y 6
      try:
          diff_var = tabla.max(axis=1).mean() - tabla.min(axis=1).mean()
          fila_e1 = tabla.loc["Estrato 1"].mean() if "Estrato 1" in tabla.index else None
@@ -1410,7 +1465,6 @@ def actualizar_dist_estrato(puntaje_col, tipo_plot):
     tmp = df_trampa[["fami_estratovivienda", puntaje_col]].dropna().copy()
     tmp = tmp[tmp["fami_estratovivienda"].isin(ORDEN_ESTRATO)]
 
-    # Convertir estrato a categoría ordenada para que el eje quede bien
     tmp["fami_estratovivienda"] = pd.Categorical(
         tmp["fami_estratovivienda"],
         categories=ORDEN_ESTRATO,
@@ -1426,8 +1480,8 @@ def actualizar_dist_estrato(puntaje_col, tipo_plot):
             x="fami_estratovivienda",
             y=puntaje_col,
             color="fami_estratovivienda",
-            box=True,           # muestra el boxplot interno dentro del violín
-            points=False,       # sin puntos individuales (son demasiados)
+            box=True,
+            points=False,
             category_orders={"fami_estratovivienda": ORDEN_ESTRATO},
             labels={
                 "fami_estratovivienda": "Estrato",
@@ -1464,7 +1518,72 @@ def actualizar_dist_estrato(puntaje_col, tipo_plot):
 
 
 
+@app.callback(
+    Output("graph-scatter-edu", "figure"),
+    Input("radio-edu-scatter", "value"),
+    Input("dd-puntaje-scatter", "value"),
+    Input("check-estratos", "value")
+)
+def actualizar_scatter_edu(col_edu, puntaje_col, estratos_seleccionados):
+    cols_needed = ["fami_estratovivienda", "cole_mcpio_ubicacion", col_edu, puntaje_col]
 
+    tmp = puntajes[cols_needed].dropna().copy()
+    tmp = tmp[tmp["fami_estratovivienda"].isin(ORDEN_ESTRATO)]
+    tmp = tmp[tmp["fami_estratovivienda"].isin(estratos_seleccionados)]
+
+
+    agg = (tmp.groupby(["cole_mcpio_ubicacion", "fami_estratovivienda"], as_index=False)
+              .agg(
+                  edu_promedio=(col_edu, "mean"),
+                  puntaje_promedio=(puntaje_col, "mean"),
+                  n=("fami_estratovivienda", "count")
+              ))
+
+    puntaje_label = PUNTAJES_LABELS.get(puntaje_col, puntaje_col)
+    edu_label = col_edu.replace("Puntaje ", "")
+
+    fig = px.scatter(
+        agg,
+        x="edu_promedio",
+        y="puntaje_promedio",
+        color="fami_estratovivienda",
+        size="n",
+        hover_name="cole_mcpio_ubicacion",
+        hover_data={
+            "edu_promedio": ":.2f",
+            "puntaje_promedio": ":.1f",
+            "n": True,
+            "fami_estratovivienda": True
+        },
+        category_orders={"fami_estratovivienda": ORDEN_ESTRATO},
+        color_discrete_map={
+            "Estrato 1": "#d62728",
+            "Estrato 2": "#ff7f0e",
+            "Estrato 3": "#ffd700",
+            "Estrato 4": "#2ca02c",
+            "Estrato 5": "#1f77b4",
+            "Estrato 6": "#9467bd",
+            "Sin Estrato": "#8c564b",
+        },
+
+        labels={
+            "edu_promedio": f"Nivel educativo ({edu_label})",
+            "puntaje_promedio": puntaje_label,
+            "fami_estratovivienda": "Estrato",
+            "n": "N° estudiantes"
+        },
+        title=f"{puntaje_label} vs Educación ({edu_label}) por municipio y estrato",
+        trendline="ols",
+        trendline_scope="overall"
+    )
+
+    fig.update_layout(
+        margin={"t": 70, "b": 60, "l": 70, "r": 30},
+        legend_title="Estrato",
+        font=dict(size=13)
+    )
+
+    return fig
 
 
 
